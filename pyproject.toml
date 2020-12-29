@@ -7,6 +7,8 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.8"
+aiohttp = "^3.7.3"
+websockets = "^8.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
