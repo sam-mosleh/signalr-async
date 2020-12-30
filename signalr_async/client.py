@@ -12,8 +12,10 @@ class SignalRClient:
         self, url: str, extra_params: dict = {}, logger: Optional[logging.Logger] = None
     ):
         self._hubs = {}
-        self._connection = Connection(url, extra_params=extra_params, logger=logger)
-        self.logger = logger or logging.getLogger(__name__)
+        self._logger = logger or logging.getLogger(__name__)
+        self._connection = Connection(
+            url, extra_params=extra_params, logger=self._logger
+        )
         self._producer_queue = asyncio.Queue()
         self._invoke_manager = InvokeManager(self._producer_queue)
 
@@ -29,11 +31,11 @@ class SignalRClient:
     async def _consumer(self):
         while True:
             message = await self._connection.queue.get()
-            self.logger.debug(f"Client message: {message}")
+            self._logger.debug(f"Client message: {message}")
             try:
                 await self._process_message(message)
             except Exception as e:
-                self.logger.exception(str(e))
+                self._logger.exception(str(e))
 
     async def _producer(self):
         while True:
@@ -58,6 +60,6 @@ class SignalRClient:
             await hub.call(method_name, args)
 
     def register(self, hub: HubProxy):
-        hub.set_invoke_manager(self._invoke_manager)
+        hub.set_invoke_manager(self._invoke_manager).set_logger(self._logger)
         self._hubs[hub.name] = hub
         return self

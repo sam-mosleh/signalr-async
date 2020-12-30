@@ -1,3 +1,4 @@
+import logging
 from typing import Callable, List, Optional
 
 from .invoke import InvokeManager
@@ -7,6 +8,7 @@ class HubProxy:
     def __init__(self, name: Optional[str] = None):
         self.name = name or type(self).__name__
         self._invoke_manager = None
+        self._logger = None
         self._callbacks = {}
         for name in dir(self):
             if name.startswith("on_"):
@@ -15,6 +17,10 @@ class HubProxy:
 
     def set_invoke_manager(self, invoke_manager: InvokeManager):
         self._invoke_manager = invoke_manager
+        return self
+
+    def set_logger(self, logger: logging.Logger):
+        self._logger = logger
         return self
 
     async def invoke(self, method: str, *args):
@@ -26,9 +32,9 @@ class HubProxy:
 
     async def call(self, method_name: str, args: List[any]):
         callback = self._callbacks.get(method_name)
-        if callback is None:
-            raise RuntimeError(f"Method {method_name} doesnt exist in hub {self.name}")
-        return await callback(*args)
+        if callback is not None:
+            return await callback(*args)
+        self._logger.warn(f"Method {method_name} doesnt exist in hub {self.name}")
 
     def on(self, name: str):
         def add_to_callbacks_decorator(func: Callable):
