@@ -24,8 +24,13 @@ class SignalRClient:
         await self._connection.start()
         self._consumer_task = asyncio.create_task(self._consumer())
         self._producer_task = asyncio.create_task(self._producer())
+        return self
 
     async def __aexit__(self, exc_type, exc, tb):
+        if exc_type != asyncio.CancelledError:
+            self._consumer_task.cancel()
+            self._producer_task.cancel()
+            await asyncio.gather(self._consumer_task, self._producer_task)
         await self._connection.close()
 
     async def _consumer(self):
