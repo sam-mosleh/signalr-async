@@ -38,6 +38,7 @@ class Connection:
         await self._start_event.wait()
 
     async def close(self):
+        self._consumer_task.cancel()
         await self.websocket.close()
         await self.session.close()
 
