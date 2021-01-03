@@ -30,7 +30,6 @@ class SignalRClient:
         if exc_type != asyncio.CancelledError:
             self._consumer_task.cancel()
             self._producer_task.cancel()
-            await asyncio.gather(self._consumer_task, self._producer_task)
         await self._connection.close()
 
     async def _consumer(self):

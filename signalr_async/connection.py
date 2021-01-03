@@ -29,11 +29,13 @@ class Connection:
         self.session = aiohttp.ClientSession()
         self.queue = asyncio.Queue()
         self._consumer_task = None
+        self._start_event = asyncio.Event()
 
     async def start(self):
         self._complete_negotiation(await self._send_negotiate_command())
         self.websocket = await websockets.connect(self._connect_path)
         self._consumer_task = asyncio.create_task(self._consumer())
+        await self._start_event.wait()
 
     async def close(self):
         await self.websocket.close()
@@ -75,7 +77,9 @@ class Connection:
         return await self._send_command("/negotiate")
 
     async def _send_start_command(self):
-        return await self._send_command("/start")
+        response = await self._send_command("/start")
+        self._start_event.set()
+        return response
 
     async def _send_command(self, command: str):
         async with self.session.get(
