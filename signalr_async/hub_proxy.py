@@ -34,7 +34,7 @@ class HubProxy:
         callback = self._callbacks.get(method_name)
         if callback is not None:
             return await callback(*args)
-        self._logger.warn(f"Method {method_name} doesnt exist in hub {self.name}")
+        self._logger.warning(f"Method {method_name} doesnt exist in hub {self.name}")
 
     def on(self, name: str):
         def add_to_callbacks_decorator(func: Callable):

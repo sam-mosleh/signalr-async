@@ -8,6 +8,10 @@ import aiohttp
 import websockets
 
 
+class SignalRConnectionError(Exception):
+    pass
+
+
 class Connection:
     def __init__(
         self,
@@ -32,10 +36,13 @@ class Connection:
         self._start_event = asyncio.Event()
 
     async def start(self):
-        self._complete_negotiation(await self._send_negotiate_command())
-        self.websocket = await websockets.connect(self._connect_path)
-        self._consumer_task = asyncio.create_task(self._consumer())
-        await self._start_event.wait()
+        try:
+            self._complete_negotiation(await self._send_negotiate_command())
+            self.websocket = await websockets.connect(self._connect_path)
+            self._consumer_task = asyncio.create_task(self._consumer())
+            await self._start_event.wait()
+        except aiohttp.ClientConnectionError as e:
+            raise SignalRConnectionError("SignalR connection failed") from e
 
     async def close(self):
         self._consumer_task.cancel()
