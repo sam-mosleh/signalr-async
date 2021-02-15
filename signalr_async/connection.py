@@ -42,6 +42,7 @@ class Connection:
             self._consumer_task = asyncio.create_task(self._consumer())
             await self._start_event.wait()
         except aiohttp.ClientConnectionError as e:
+            await self.session.close()
             raise SignalRConnectionError("SignalR connection failed") from e
 
     async def close(self):

@@ -1,4 +1,4 @@
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 
 from .client import SignalRClient
 from .hub_proxy import HubProxy
