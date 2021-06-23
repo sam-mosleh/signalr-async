@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Optional
 
-from websockets.exceptions import ConnectionClosedOK
+from websockets.exceptions import ConnectionClosed, ConnectionClosedOK
 
 from .connection import Connection
 from .hub_proxy import HubProxy
@@ -50,7 +50,16 @@ class SignalRClient:
     async def _producer(self):
         while True:
             message = await self._producer_queue.get()
-            await self._connection.send(message)
+            try:
+                await self._connection.send(message)
+            except ConnectionClosed:
+                self._logger.error(
+                    f"Message {message['I']} has not been sent because connection is closed"
+                )
+                # TODO: add another type of invokation exception to raise
+                self._invoke_manager.set_invokation_exception(
+                    message["I"], "Connection is closed"
+                )
 
     async def _process_message(self, message: dict):
         if message:
