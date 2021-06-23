@@ -2,4 +2,4 @@ from signalr_async import __version__
 
 
 def test_version():
-    assert __version__ == "0.1.6"
+    assert __version__ == "1.0.0"

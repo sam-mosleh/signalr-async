@@ -2,6 +2,8 @@ import asyncio
 import logging
 from typing import Optional
 
+from websockets.exceptions import ConnectionClosedOK
+
 from .connection import Connection
 from .hub_proxy import HubProxy
 from .invoke import InvokeManager
@@ -34,7 +36,11 @@ class SignalRClient:
 
     async def _consumer(self):
         while True:
-            message = await self._connection.queue.get()
+            try:
+                message = await self._connection.receive()
+            except ConnectionClosedOK:
+                self._logger.info("Connection is closed. Consumer done.")
+                return
             self._logger.debug(f"Client message: {message}")
             try:
                 await self._process_message(message)
@@ -47,23 +53,38 @@ class SignalRClient:
             await self._connection.send(message)
 
     async def _process_message(self, message: dict):
-        if "P" in message:
-            # Progress update message
-            raise RuntimeError(f"Progress update message: {message}")
-        if "I" in message:
-            # Invokation result message
-            self._invoke_manager.set_invokation_result(message["I"], message["R"])
-        else:
-            # Invoke message
-            hub_name = message["H"]
-            method_name = message["M"]
-            args = message["A"]
-            hub: HubProxy = self._hubs.get(hub_name)
-            if hub is None:
-                raise RuntimeError(f"Hub [{hub_name}] not found")
-            await hub.call(method_name, args)
+        if message:
+            if "P" in message:
+                # Progress update message
+                raise RuntimeError(f"Progress update message: {message}")
+            if "I" in message:
+                if "R" in message:
+                    # Invokation result message
+                    self._invoke_manager.set_invokation_result(
+                        message["I"], message["R"]
+                    )
+                elif "E" in message:
+                    # Invokation exception
+                    self._invoke_manager.set_invokation_exception(
+                        message["I"], message["E"]
+                    )
+                else:
+                    raise RuntimeError(f"Progress invoke message: {message}")
+            else:
+                # Invoke message
+                for invoke_message in message["M"]:
+                    hub_name = invoke_message["H"]
+                    method_name = invoke_message["M"]
+                    args = invoke_message["A"]
+                    hub: HubProxy = self._hubs.get(hub_name)
+                    if hub is None:
+                        raise RuntimeError(f"Hub [{hub_name}] not found")
+                    await hub.call(method_name, args)
 
     def register(self, hub: HubProxy):
         hub.set_invoke_manager(self._invoke_manager).set_logger(self._logger)
         self._hubs[hub.name] = hub
         return self
+
+    async def wait(self):
+        return await self._consumer_task

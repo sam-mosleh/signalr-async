@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Callable, List, Optional
 
@@ -33,7 +34,9 @@ class HubProxy:
     async def call(self, method_name: str, args: List[any]):
         callback = self._callbacks.get(method_name)
         if callback is not None:
-            return await callback(*args)
+            task = asyncio.create_task(callback(*args))
+            await asyncio.sleep(0)
+            return task
         self._logger.warning(f"Method {method_name} doesnt exist in hub {self.name}")
 
     def on(self, name: str):
