@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Optional
 
-from websockets.exceptions import ConnectionClosed, ConnectionClosedOK
+from websockets.exceptions import ConnectionClosed
 
 from .connection import Connection
 from .hub_proxy import HubProxy
@@ -38,14 +38,10 @@ class SignalRClient:
         while True:
             try:
                 message = await self._connection.receive()
-            except ConnectionClosedOK:
+            except ConnectionClosed:
                 self._logger.info("Connection is closed. Consumer done.")
-                return
-            self._logger.debug(f"Client message: {message}")
-            try:
-                await self._process_message(message)
-            except Exception as e:
-                self._logger.exception(str(e))
+                raise
+            await self._process_message(message)
 
     async def _producer(self):
         while True:
@@ -95,5 +91,5 @@ class SignalRClient:
         self._hubs[hub.name] = hub
         return self
 
-    async def wait(self):
-        return await self._consumer_task
+    async def wait(self, timeout: float = None):
+        await asyncio.wait({self._consumer_task}, timeout=timeout)
