@@ -105,7 +105,10 @@ class Connection:
             parsed_url = parsed_url._replace(scheme="ws")
         else:
             parsed_url = parsed_url._replace(scheme="wss")
-        return parsed_url.geturl() + "/connect?" + urlencode(self._receive_params)
+        parsed_url = parsed_url._replace(
+            path=parsed_url.path + "/connect", query=urlencode(self._receive_params)
+        )
+        return parsed_url.geturl()
 
     async def _send_command(self, command: str):
         async with self.session.get(

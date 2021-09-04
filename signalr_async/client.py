@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from websockets.exceptions import ConnectionClosed
 
@@ -11,7 +11,10 @@ from .invoke import InvokeManager
 
 class SignalRClient:
     def __init__(
-        self, url: str, extra_params: dict = {}, logger: Optional[logging.Logger] = None
+        self,
+        url: str,
+        extra_params: Dict[str, Any] = {},
+        logger: Optional[logging.Logger] = None,
     ):
         self._hubs = {}
         self._logger = logger or logging.getLogger(__name__)
@@ -23,6 +26,7 @@ class SignalRClient:
 
     async def __aenter__(self):
         self._connection.hub_names = list(self._hubs.keys())
+        # TODO: What if it gets cancelled? => aiohttp client error
         await self._connection.start()
         self._consumer_task = asyncio.create_task(self._consumer())
         self._producer_task = asyncio.create_task(self._producer())

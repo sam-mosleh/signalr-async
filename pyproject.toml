@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "signalr-async"
-version = "1.1.0"
+version = "1.2.0"
 description = "Python SignalR async client"
 authors = ["Sam Mosleh <sam.mosleh@ut.ac.ir>"]
 readme = "README.md"
@@ -10,8 +10,9 @@ keywords = ["SignalR", "SignalR client", "Real-time messaging"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-aiohttp = "^3.7.3"
+aiohttp = "^3.6.0"
 websockets = "^8.1"
+msgpack = "^1.0.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
