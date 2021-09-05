@@ -44,6 +44,8 @@ class InvokeManager(BaseInvokeManager):
 
 
 class Connection:
+    negotiate_version: str = "1"
+
     def __init__(
         self,
         url: str,
@@ -65,13 +67,15 @@ class Connection:
 
     async def start(self):
         self.session = aiohttp.ClientSession()
-        neg = await self.negotiate()
-        self.logger.debug(f"Negotiation response: {neg}")
-        self.connection_id = neg["connectionId"]
-        connect_path = self._connect_path(self.url, self.connection_id)
+        negotiation_response = await self.negotiate()
+        self.logger.debug(f"Negotiation response: {negotiation_response}")
+        self.connection_id = negotiation_response["connectionId"]
+        connect_path = self._connect_path(
+            self.url, negotiation_response.get("connectionToken", self.connection_id)
+        )
         self.logger.debug(f"Connecting to {connect_path}")
         self.websocket = await self.session.ws_connect(
-            self.url, headers=self.extra_headers
+            connect_path, headers=self.extra_headers
         )
         self.logger.debug(
             f"Handshake using protocol={self.protocol.name}, version={self.protocol.version}"
@@ -92,10 +96,13 @@ class Connection:
 
     async def negotiate(self):
         # TODO: handle redirects
-        self.logger.debug(f"Negotiation started with {self.url}/negotiate")
+        self.logger.debug(f"Negotiation started")
         async with self.session.post(
-            self.url + "/negotiate", headers=self.extra_headers
+            self.url + "/negotiate",
+            headers=self.extra_headers,
+            params={"negotiateVersion": self.negotiate_version},
         ) as resp:
+            self.logger.debug(f"Negotiation completed from {resp.url}")
             resp.raise_for_status()
             return await resp.json()
 
