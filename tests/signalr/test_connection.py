@@ -27,6 +27,28 @@ def test_common_params():
     }
 
 
+def test_receive_params():
+    url = "http://localhost"
+    hub_names = ["a", "b"]
+    conn = SignalRConnection(
+        url, hub_names, extra_params={"random_key": "random_value"}
+    )
+    assert conn._receive_params() == {
+        "clientProtocol": "1.5",
+        "connectionData": '[{"name": "a"}, {"name": "b"}]',
+        "random_key": "random_value",
+    }
+    conn.message_id = "mymessageid"
+    conn.groups_token = "mygroupstoken"
+    assert conn._receive_params() == {
+        "clientProtocol": "1.5",
+        "connectionData": '[{"name": "a"}, {"name": "b"}]',
+        "random_key": "random_value",
+        "messageId": "mymessageid",
+        "groupsToken": "mygroupstoken",
+    }
+
+
 def test_read_message(mocker: MockFixture):
     groups_token = "G"
     message_id = "M"

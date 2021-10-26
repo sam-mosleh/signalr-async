@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Generator
+from typing import Any, Dict, Generator, Union
 
 from signalr_async.signalrcore.messages import HubMessage, message_type_to_class
 
@@ -35,9 +35,9 @@ class JsonProtocol(ProtocolBase[str]):
     def parse(self, raw_messages: str) -> Generator[HubMessage, None, None]:
         for message in self.decode(raw_messages):
             message_type = message.pop("type")
-            yield message_type_to_class[message_type](  # type: ignore
+            yield message_type_to_class[message_type](
                 **{self.aliases.get(key, key): val for key, val in message.items()}
-            )
+            )  # type: ignore
 
     def encode(self, output: Dict[str, Any]) -> str:
         return json.dumps(output) + self.seperator
@@ -48,4 +48,5 @@ class JsonProtocol(ProtocolBase[str]):
             for key, val in message.__dict__.items()
             if val is not None
         }
+        output["type"] = message.message_type
         return self.encode(output)

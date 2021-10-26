@@ -41,11 +41,11 @@ class SignalRClientBase(ABC, Generic[H]):
     def build_connection(
         self, base_url: str, connection_options: Dict[str, Any]
     ) -> ConnectionBase:
-        pass
+        """Build new connection"""
 
     @abstractmethod
     def build_invoke_manager(self) -> InvokeManagerBase:
-        pass
+        """Build invoke manager and connect hubs to it"""
 
     async def __aenter__(self) -> "SignalRClientBase":
         await self.start()
@@ -78,16 +78,17 @@ class SignalRClientBase(ABC, Generic[H]):
             await self._disconnection_event()
         for task in self._all_tasks:
             task.cancel()
-        await asyncio.gather(*self._all_tasks)
+        gather = await asyncio.gather(*self._all_tasks, return_exceptions=True)
+        self.logger.debug(f"{gather=}")
         self._all_tasks.clear()
 
     @abstractmethod
     async def _connection_event(self) -> None:
-        pass
+        """Inform hub or hubs that client is connected"""
 
     @abstractmethod
     async def _disconnection_event(self) -> None:
-        pass
+        """Inform hub or hubs that client is disconnected"""
 
     async def _producer(self) -> None:
         while True:
@@ -104,7 +105,7 @@ class SignalRClientBase(ABC, Generic[H]):
 
     @abstractmethod
     def _get_message_id(self, message: Any) -> str:
-        pass
+        """Message id from invoke message"""
 
     async def _consumer(self) -> None:
         while True:
@@ -135,7 +136,7 @@ class SignalRClientBase(ABC, Generic[H]):
 
     @abstractmethod
     async def _process_message(self, message: Any) -> None:
-        pass
+        """Process received messages"""
 
     async def _timeout_handler(self) -> None:
         timeout_steps = min(self.timeout / 10, 1)

@@ -2,7 +2,7 @@ from typing import Any
 
 from signalr_async.signalrcore.messages import HubMessage
 from signalr_async.signalrcore.protocols import ProtocolBase
-from signalr_async.signalrcore.protocols.base import StrBytes
+from typing import Union
 
 
 class DummyProtocol(ProtocolBase):
@@ -20,10 +20,10 @@ class DummyProtocol(ProtocolBase):
     def is_binary(self) -> bool:
         return False
 
-    def decode(self, raw_messages: StrBytes):
+    def decode(self, raw_messages: Union[str, bytes]):
         pass
 
-    def parse(self, raw_messages: StrBytes):
+    def parse(self, raw_messages: Union[str, bytes]):
         pass
 
     def encode(self, output: Any):

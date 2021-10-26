@@ -18,7 +18,7 @@ class HubMessageBase(ABC):
     @property
     @abstractmethod
     def message_type(self) -> MessageTypes:
-        pass
+        """Message type of SignalRCore messages"""
 
 
 @dataclass

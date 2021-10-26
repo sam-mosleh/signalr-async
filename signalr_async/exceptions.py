@@ -22,5 +22,5 @@ class ConnectionClosed(AsyncSignalRConnectionError):
     pass
 
 
-class ServerInvokationException(AsyncSignalRException):
+class ServerInvocationException(AsyncSignalRException):
     pass

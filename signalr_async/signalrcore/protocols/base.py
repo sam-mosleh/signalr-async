@@ -3,8 +3,6 @@ from abc import ABC, abstractmethod
 from typing import Any, Generator, Generic, TypeVar, Union
 from signalr_async.signalrcore.messages import HubMessage
 
-StrBytes = Union[str, bytes]
-
 T = TypeVar("T")
 
 
@@ -39,16 +37,16 @@ class ProtocolBase(ABC, Generic[T]):
 
     @abstractmethod
     def decode(self, raw_messages: T) -> Generator[Any, None, None]:
-        pass
+        """Generator which decodes messages from connection to python objects"""
 
     @abstractmethod
     def parse(self, raw_messages: T) -> Generator[HubMessage, None, None]:
-        pass
+        """Parse raw message from connection to HubMessge using decode method"""
 
     @abstractmethod
     def encode(self, output: Any) -> T:
-        pass
+        """Encode python objects to transferable format"""
 
     @abstractmethod
     def write(self, message: HubMessage) -> T:
-        pass
+        """Transform HubMessage to transferable format"""
