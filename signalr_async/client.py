@@ -3,7 +3,7 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import Any, Dict, Generic, Optional, TypeVar, List, Type
+from typing import Any, Dict, Generic, List, Optional, Type, TypeVar
 
 from .connection import ConnectionBase
 from .exceptions import ConnectionClosed, ConnectionInitializationError

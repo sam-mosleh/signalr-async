@@ -1,7 +1,7 @@
 import logging
 import time
 from abc import abstractmethod
-from typing import Dict, List, Optional, Tuple, Union, Any, Generic, TypeVar
+from typing import Dict, Generic, List, Optional, Tuple, TypeVar, Union
 
 import aiohttp
 import yarl

@@ -1,6 +1,7 @@
-from signalr_async.signalr.hub import SignalRHub
 import pytest
 from pytest_mock import MockFixture
+
+from signalr_async.signalr.hub import SignalRHub
 
 pytestmark = pytest.mark.asyncio
 

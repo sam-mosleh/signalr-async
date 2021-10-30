@@ -1,15 +1,17 @@
 import json
 import logging
-from typing import Dict, List, Optional, Union, Any, Tuple
-from dataclasses import dataclass
-import yarl
 from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+import yarl
+
 from signalr_async.connection import ConnectionBase
 from signalr_async.exceptions import (
     ConnectionInitializationError,
     IncompatibleServerError,
 )
-from .messages import HubInvocation, HubResult, HubMessage
+
+from .messages import HubInvocation, HubMessage, HubResult
 
 # NegotiationResponse
 # {

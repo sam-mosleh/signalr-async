@@ -1,6 +1,7 @@
 import json
 from abc import ABC, abstractmethod
-from typing import Any, Generator, Generic, TypeVar, Union
+from typing import Any, Generator, Generic, TypeVar
+
 from signalr_async.signalrcore.messages import HubMessage
 
 T = TypeVar("T")

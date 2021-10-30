@@ -1,5 +1,6 @@
-from typing import Dict, Any, Optional, List, Union
 from dataclasses import dataclass
+from typing import Any, Dict, Optional, Union
+
 from signalr_async.messages import InvocationBase
 
 

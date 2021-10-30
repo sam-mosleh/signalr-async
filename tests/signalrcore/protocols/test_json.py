@@ -1,5 +1,5 @@
+from signalr_async.signalrcore.messages import CompletionMessage, PingMessage
 from signalr_async.signalrcore.protocols import JsonProtocol
-from signalr_async.signalrcore.messages import PingMessage, CompletionMessage
 
 handshake_dict = {"protocol": "json", "version": 1}
 encoded_handshake = '{"protocol": "json", "version": 1}\x1e'

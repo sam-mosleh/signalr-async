@@ -2,6 +2,7 @@ from typing import Any, Generator, List, Tuple
 
 import msgpack
 
+from signalr_async.exceptions import InvalidMessage
 from signalr_async.signalrcore.messages import (
     CancelInvocationMessage,
     CloseMessage,
@@ -15,7 +16,6 @@ from signalr_async.signalrcore.messages import (
 )
 
 from .base import ProtocolBase
-from signalr_async.exceptions import InvalidMessage
 
 
 class MessagePackProtocol(ProtocolBase[bytes]):

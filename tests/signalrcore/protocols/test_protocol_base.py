@@ -1,8 +1,7 @@
-from typing import Any
+from typing import Any, Union
 
 from signalr_async.signalrcore.messages import HubMessage
 from signalr_async.signalrcore.protocols import ProtocolBase
-from typing import Union
 
 
 class DummyProtocol(ProtocolBase):

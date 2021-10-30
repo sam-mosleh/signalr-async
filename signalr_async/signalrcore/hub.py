@@ -1,5 +1,6 @@
+from typing import Any, Dict
+
 from signalr_async.hub import HubBase
-from typing import Dict, Any
 
 
 class SignalRCoreHub(HubBase):

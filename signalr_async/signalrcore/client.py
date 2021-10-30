@@ -1,5 +1,5 @@
 import asyncio
-from typing import Dict, Optional, Any
+from typing import Any, Dict
 
 from signalr_async.client import SignalRClientBase
 
@@ -16,7 +16,6 @@ from .messages import (
     StreamInvocationMessage,
     StreamItemMessage,
 )
-from .protocols import ProtocolBase
 
 
 class SignalRCoreClient(

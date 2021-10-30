@@ -1,12 +1,12 @@
 import asyncio
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List
 
 from signalr_async.client import SignalRClientBase
 
 from .connection import SignalRConnection
 from .hub import SignalRHub
 from .invoke_manager import SignalRInvokeManager
-from .messages import HubResult, HubInvocation, HubMessage
+from .messages import HubInvocation, HubMessage, HubResult
 
 
 class SignalRClient(SignalRClientBase[List[SignalRHub], HubInvocation, HubMessage]):

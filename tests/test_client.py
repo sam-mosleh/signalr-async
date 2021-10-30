@@ -1,8 +1,9 @@
 from typing import Any
-from signalr_async.client import SignalRClientBase
+
 import pytest
 from pytest_mock import MockerFixture
 
+from signalr_async.client import SignalRClientBase
 
 pytestmark = pytest.mark.asyncio
 

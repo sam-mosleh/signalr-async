@@ -1,12 +1,9 @@
-from signalr_async.signalrcore.protocols import MessagePackProtocol
-from signalr_async.signalrcore.messages import (
-    PingMessage,
-    CompletionMessage,
-    InvocationMessage,
-)
-from signalr_async.exceptions import InvalidMessage
-from pytest_mock import MockerFixture
 import pytest
+from pytest_mock import MockerFixture
+
+from signalr_async.exceptions import InvalidMessage
+from signalr_async.signalrcore.messages import InvocationMessage, PingMessage
+from signalr_async.signalrcore.protocols import MessagePackProtocol
 
 ping = PingMessage()
 

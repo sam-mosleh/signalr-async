@@ -1,8 +1,9 @@
 import json
-from typing import Any, Dict, Generator, Union
+from dataclasses import asdict
+from typing import Any, Dict, Generator
 
 from signalr_async.signalrcore.messages import HubMessage, message_type_to_class
-from dataclasses import asdict
+
 from .base import ProtocolBase
 
 

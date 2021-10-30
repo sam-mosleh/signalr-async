@@ -1,13 +1,12 @@
 import logging
-from typing import Dict, Optional, Any, List, Union, Tuple
-
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import yarl
 
 from signalr_async.connection import ConnectionBase
 from signalr_async.exceptions import HandshakeError
 
-from .messages import PingMessage, HubMessage
+from .messages import HubMessage, PingMessage
 from .protocols import JsonProtocol, ProtocolBase
 
 
