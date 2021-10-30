@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from abc import abstractmethod
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
 
 from .invoke_manager import InvokeManagerBase
 
@@ -11,11 +11,20 @@ class HubBase:
         self.name: str = name or type(self).__name__
         self._invoke_manager: Optional[InvokeManagerBase] = None
         self._logger: Optional[logging.Logger] = None
-        self._callbacks: Dict[str, Callable[..., Awaitable[None]]] = {}
+        self._callbacks: Dict[str, Callable] = {}
         for name in dir(self):
             if name.startswith("on_"):
                 event_name = name[len("on_") :]
-                self._callbacks[event_name] = getattr(self, name)
+                self.on(event_name, getattr(self, name))
+
+    def on(
+        self, name: str, callback: Optional[Callable] = None
+    ) -> Union[Callable, Callable[[Callable], Callable]]:
+        def set_callback_decorator(callback: Callable) -> Callable:
+            self._callbacks[name] = callback
+            return callback
+
+        return set_callback_decorator(callback) if callback else set_callback_decorator
 
     def _set_invoke_manager(self, invoke_manager: InvokeManagerBase) -> "HubBase":
         self._invoke_manager = invoke_manager
@@ -28,11 +37,18 @@ class HubBase:
     async def _call(self, method_name: str, args: List[Any]) -> None:
         callback = self._callbacks.get(method_name)
         if callback is not None:
-            asyncio.create_task(callback(*args))
+            asyncio.create_task(self._async_callback(callback, args))
         elif self._logger is not None:
             self._logger.warning(
                 f"Method {method_name} doesnt exist in hub {self.name}"
             )
+
+    async def _async_callback(self, callback: Callable, args: List[Any]) -> Any:
+        if asyncio.iscoroutinefunction(callback):
+            return await callback(*args)
+        else:
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(None, callback, *args)
 
     @abstractmethod
     async def invoke(self, method: str, *args: Any) -> Dict[str, Any]:
