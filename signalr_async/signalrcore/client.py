@@ -19,7 +19,9 @@ from .messages import (
 from .protocols import ProtocolBase
 
 
-class SignalRCoreClient(SignalRClientBase[SignalRCoreHub]):
+class SignalRCoreClient(
+    SignalRClientBase[SignalRCoreHub, InvocationMessage, HubMessage]
+):
     def build_connection(
         self,
         base_url: str,
@@ -46,9 +48,6 @@ class SignalRCoreClient(SignalRClientBase[SignalRCoreHub]):
     async def _disconnection_event(self) -> None:
         asyncio.create_task(self._hub.on_disconnect())
 
-    def _get_message_id(self, message: InvocationMessage) -> str:
-        return message.invocation_id  # type: ignore
-
     async def _process_message(self, message: HubMessage) -> None:
         if isinstance(message, InvocationMessage):
             self.logger.info(f"Callback {message}")
@@ -57,11 +56,11 @@ class SignalRCoreClient(SignalRClientBase[SignalRCoreHub]):
             self.logger.info(f"Stream {message}")
         elif isinstance(message, CompletionMessage):
             if message.error:
-                self._invoke_manager.set_invokation_exception(
+                self._invoke_manager.set_invocation_exception(
                     message.invocation_id, message.error
                 )
             else:
-                self._invoke_manager.set_invokation_result(
+                self._invoke_manager.set_invocation_result(
                     message.invocation_id, message.error
                 )
         elif isinstance(message, StreamInvocationMessage):

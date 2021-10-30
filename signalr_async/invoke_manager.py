@@ -1,7 +1,7 @@
 import asyncio
 from abc import ABC, abstractmethod
 from typing import Any, Dict
-
+from signalr_async.messages import InvocationBase
 from .exceptions import ServerInvocationException
 
 
@@ -21,7 +21,7 @@ class InvokeManagerBase(ABC):
         return invocation_id
 
     async def _invoke_and_wait_for_result(
-        self, invocation_id: str, message: Any
+        self, invocation_id: str, message: InvocationBase
     ) -> Dict[str, Any]:
         await self._queue.put(message)
         await self.invocation_events[invocation_id].wait()

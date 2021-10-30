@@ -1,14 +1,15 @@
 import json
 import logging
 from typing import Dict, List, Optional, Union, Any, Tuple
-
+from dataclasses import dataclass
 import yarl
-
+from enum import Enum
 from signalr_async.connection import ConnectionBase
 from signalr_async.exceptions import (
     ConnectionInitializationError,
     IncompatibleServerError,
 )
+from .messages import HubInvocation, HubResult, HubMessage
 
 # NegotiationResponse
 # {
@@ -27,44 +28,16 @@ from signalr_async.exceptions import (
 #     public string Error { get; set; }
 # }
 
-# common_params = {"clientProtocol": protocol_version, "transport": transport, "connectionData":hub_names, "connectionToken": connectionToken, **custom}
-# Negotiate : url/negotiate + common_params
-# Start : url/start + common_params
-# Connect: url/connect + receive_params
-# Reconnect: url/reconnect + receive_params
-# Abort: url/abort + common_params
+
+class CommandEnum(str, Enum):
+    NEGOTIATE = "negotiate"
+    START = "start"
+    CONNECT = "connect"
+    RECONNECT = "reconnect"
+    ABORT = "abort"
 
 
-# ConnectionId = negotiationResponse.ConnectionId;
-# ConnectionToken = negotiationResponse.ConnectionToken;
-# _disconnectTimeout = TimeSpan.FromSeconds(negotiationResponse.DisconnectTimeout);
-# _totalTransportConnectTimeout = TransportConnectTimeout + TimeSpan.FromSeconds(negotiationResponse.TransportConnectTimeout);
-# var beatInterval = TimeSpan.FromSeconds(5);
-# // If we have a keep alive
-# if (negotiationResponse.KeepAliveTimeout != null)
-# {
-#     _keepAliveData = new KeepAliveData(TimeSpan.FromSeconds(negotiationResponse.KeepAliveTimeout.Value));
-#     #_reconnectWindow = _disconnectTimeout + _keepAliveData.Timeout;
-
-#     beatInterval = _keepAliveData.CheckInterval;
-# }
-# else
-# {
-#     #_reconnectWindow = _disconnectTimeout;
-# }
-
-
-# // Clear the state for this connection
-# ConnectionId = null;
-# ConnectionToken = null;
-# GroupsToken = null;
-# MessageId = null;
-# _connectionData = null;
-# _actualUrl = _userUrl;
-# _actualQueryString = _userQueryString;
-
-
-class SignalRConnection(ConnectionBase):
+class SignalRConnection(ConnectionBase[HubMessage, Optional[HubInvocation]]):
     client_protocol_version: str = "1.5"
 
     def __init__(
@@ -102,11 +75,11 @@ class SignalRConnection(ConnectionBase):
             params["groupsToken"] = self.groups_token
         return params
 
-    async def _send_command(self, command: str) -> Any:
+    async def _send_command(self, command: CommandEnum) -> Any:
         if self._session is None:
             raise RuntimeError("Connection is not started")
         async with self._session.get(
-            self._base_url / command,
+            self._base_url / command.value,
             params=self._common_params(),
             headers=self._extra_headers,
         ) as resp:
@@ -114,7 +87,7 @@ class SignalRConnection(ConnectionBase):
             return await resp.json()
 
     async def _negotiate(self) -> None:
-        negotiation_response = await self._send_command("negotiate")
+        negotiation_response = await self._send_command(CommandEnum.NEGOTIATE)
         self.logger.debug(f"Negotiation response: {negotiation_response}")
         if "availableTransports" in negotiation_response:
             raise IncompatibleServerError("ASP.Net Core server detected")
@@ -126,40 +99,63 @@ class SignalRConnection(ConnectionBase):
         # TODO: raise IncompatibleServerError in case of bad ProtocolVersion
         self.connection_token = negotiation_response["ConnectionToken"]
         self.connection_id = negotiation_response["ConnectionId"]
-        self.keepalive_timeout = negotiation_response.get("KeepAliveTimeout")
+        self.keepalive_timeout = negotiation_response.get("KeepAliveTimeout", 5)
 
-    def _generate_receive_path(self, command: str) -> yarl.URL:
+    def _generate_receive_path(self, command: CommandEnum) -> yarl.URL:
         if self._base_url.scheme == "http":
             scheme = "ws"
         elif self._base_url.scheme == "https":
             scheme = "wss"
         else:
             raise ValueError(f"Unknown scheme {self._base_url.scheme}")
-        return self._base_url.with_scheme(scheme) / command % self._receive_params()
+        return (
+            self._base_url.with_scheme(scheme) / command.value % self._receive_params()
+        )
 
     def _generate_connect_path(self) -> yarl.URL:
-        return self._generate_receive_path("connect")
+        return self._generate_receive_path(CommandEnum.CONNECT)
 
     async def _initialize_connection(self) -> None:
         # TODO: timeout
-        first_message = await self.receive()
-        if first_message.get("S", 0) == 1:
-            start_response = await self._send_command("start")
+        # "C": str, S: int, M: List
+        first_message = json.loads(await self._receive_raw())
+        if "C" in first_message and first_message.get("S", 0) == 1:
+            self.message_id = first_message["C"]
+            start_response = await self._send_command(CommandEnum.START)
             if start_response["Response"] != "started":
                 raise ConnectionInitializationError("Server is not started")
         else:
             raise ConnectionInitializationError("Server did not send the start message")
 
-    def _read_message(self, data: Union[str, bytes]) -> Dict[str, Any]:
+    def _read_message(self, data: Union[str, bytes]) -> List[HubMessage]:
         raw_message: Dict[str, Any] = json.loads(data)
-        if "G" in raw_message:
-            self.groups_token = raw_message["G"]
-        if "M" in raw_message:
-            self.message_id = raw_message["C"]
-        return raw_message
+        if "I" in raw_message:
+            return [HubResult.from_raw_message(raw_message)]
+        message_dict = {
+            "message_id": raw_message.get("C"),
+            "messages": raw_message.get("M"),
+            "initialized": raw_message.get("S"),
+            "should_reconnect": raw_message.get("T"),
+            "long_poll_delay": raw_message.get("L"),
+            "groups_token": raw_message.get("G"),
+            "error": raw_message.get("E"),
+        }
+        if message_dict["error"] is not None:
+            # TODO: Close connection with error
+            self.logger.error(message_dict["error"])
+        if message_dict["groups_token"] is not None:
+            self.groups_token = message_dict["groups_token"]
+        if message_dict["messages"] is not None:
+            self.message_id = message_dict["message_id"]
+            return [HubInvocation.from_raw_message(m) for m in message_dict["messages"]]
+        elif raw_message:
+            self.logger.error(f"Whats this: {raw_message}")
+        return []
 
-    def _write_message(self, message: Dict[str, Any]) -> Tuple[Union[str, bytes], bool]:
-        return json.dumps(message), False
+    def _write_message(
+        self, message: Optional[HubInvocation]
+    ) -> Tuple[Union[str, bytes], bool]:
+        return json.dumps(message.to_raw_message() if message else {}), False
 
     async def _clear_connection_data(self) -> None:
         self.connection_id = None
@@ -168,4 +164,4 @@ class SignalRConnection(ConnectionBase):
         self.message_id = None
 
     async def ping(self) -> None:
-        return await self.send({})
+        return await self.send(None)

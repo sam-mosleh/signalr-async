@@ -1,15 +1,18 @@
 import logging
 import time
 from abc import abstractmethod
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, List, Optional, Tuple, Union, Any, Generic, TypeVar
 
 import aiohttp
 import yarl
 
 from signalr_async.exceptions import ConnectionClosed, ConnectionInitializationError
 
+T = TypeVar("T")
+O = TypeVar("O")
 
-class ConnectionBase:
+
+class ConnectionBase(Generic[T, O]):
     def __init__(
         self,
         base_url: str,
@@ -114,7 +117,7 @@ class ConnectionBase:
         self.last_message_received_time = time.time()
         return raw_ws_message.data  # type: ignore
 
-    async def receive(self, timeout: Optional[float] = None) -> Any:
+    async def receive(self, timeout: Optional[float] = None) -> List[T]:
         return self._read_message(await self._receive_raw(timeout=timeout))
 
     async def _send_raw(
@@ -131,15 +134,15 @@ class ConnectionBase:
         except ConnectionResetError as e:
             raise ConnectionClosed() from e
 
-    async def send(self, message: Any) -> None:
+    async def send(self, message: O) -> None:
         return await self._send_raw(*self._write_message(message))
 
     @abstractmethod
-    def _read_message(self, data: Union[str, bytes]) -> Any:
+    def _read_message(self, data: Union[str, bytes]) -> List[T]:
         pass
 
     @abstractmethod
-    def _write_message(self, message: Any) -> Tuple[Union[str, bytes], bool]:
+    def _write_message(self, message: O) -> Tuple[Union[str, bytes], bool]:
         pass
 
     @abstractmethod

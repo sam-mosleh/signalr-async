@@ -29,17 +29,17 @@ class HubBase:
         callback = self._callbacks.get(method_name)
         if callback is not None:
             asyncio.create_task(callback(*args))
-        if self._logger is not None:
+        elif self._logger is not None:
             self._logger.warning(
                 f"Method {method_name} doesnt exist in hub {self.name}"
             )
 
     @abstractmethod
     async def invoke(self, method: str, *args: Any) -> Dict[str, Any]:
-        pass
+        """Invoke a method of server"""
 
     async def on_connect(self, connection_id: str) -> None:
-        pass
+        """Connect event"""
 
     async def on_disconnect(self) -> None:
-        pass
+        """Disconnect event"""

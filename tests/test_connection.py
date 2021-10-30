@@ -1,3 +1,4 @@
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -8,7 +9,7 @@ from signalr_async.connection import ConnectionBase
 pytestmark = pytest.mark.asyncio
 
 
-class DummyConnection(ConnectionBase):
+class DummyConnection(ConnectionBase[Any, Any]):
     async def _negotiate(self):
         pass
 
@@ -18,7 +19,7 @@ class DummyConnection(ConnectionBase):
     async def _initialize_connection(self):
         pass
 
-    def _read_message(self, data):
+    def _read_message(self, data) -> Any:
         pass
 
     def _write_message(self, message):

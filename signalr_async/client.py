@@ -8,11 +8,17 @@ from typing import Any, Dict, Generic, Optional, TypeVar, List, Type
 from .connection import ConnectionBase
 from .exceptions import ConnectionClosed, ConnectionInitializationError
 from .invoke_manager import InvokeManagerBase
+from .messages import InvocationBase
 
+# Type of hub
 H = TypeVar("H")
+# Type of Invoke message which is in queue
+I = TypeVar("I", bound=InvocationBase)
+# Type of all Messages received
+R = TypeVar("R")
 
 
-class SignalRClientBase(ABC, Generic[H]):
+class SignalRClientBase(ABC, Generic[H, I, R]):
     def __init__(
         self,
         base_url: str,
@@ -34,7 +40,9 @@ class SignalRClientBase(ABC, Generic[H]):
         # self._timeout_task: Optional[asyncio.Task] = None
         # self._keepalive_task: Optional[asyncio.Task] = None
         self._all_tasks: List[asyncio.Task] = []
-        self._connection = self.build_connection(base_url, connection_options or {})
+        self._connection: ConnectionBase[R, I] = self.build_connection(
+            base_url, connection_options or {}
+        )
         self._invoke_manager = self.build_invoke_manager()
 
     @abstractmethod
@@ -92,20 +100,17 @@ class SignalRClientBase(ABC, Generic[H]):
 
     async def _producer(self) -> None:
         while True:
-            message = await self._producer_queue.get()
-            try:
-                await self._connection.send(message)
-            except ConnectionClosed:
-                self.logger.error(
-                    f"Message has not been sent because connection is closed"
-                )
-                self._invoke_manager.set_invokation_exception(
-                    self._get_message_id(message), "Connection is closed"
-                )
-
-    @abstractmethod
-    def _get_message_id(self, message: Any) -> str:
-        """Message id from invoke message"""
+            message: I = await self._producer_queue.get()
+            if message.invocation_id:
+                try:
+                    await self._connection.send(message)
+                except ConnectionClosed:
+                    self.logger.error(
+                        f"Message has not been sent because connection is closed"
+                    )
+                    self._invoke_manager.set_invocation_exception(
+                        message.invocation_id, "Connection is closed"
+                    )
 
     async def _consumer(self) -> None:
         while True:
@@ -135,7 +140,7 @@ class SignalRClientBase(ABC, Generic[H]):
                 raise e
 
     @abstractmethod
-    async def _process_message(self, message: Any) -> None:
+    async def _process_message(self, message: R) -> None:
         """Process received messages"""
 
     async def _timeout_handler(self) -> None:

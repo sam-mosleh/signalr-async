@@ -24,3 +24,11 @@ class ConnectionClosed(AsyncSignalRConnectionError):
 
 class ServerInvocationException(AsyncSignalRException):
     pass
+
+
+class MessageError(AsyncSignalRException):
+    pass
+
+
+class InvalidMessage(MessageError):
+    pass

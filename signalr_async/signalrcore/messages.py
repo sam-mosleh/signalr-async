@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import Any, Dict, List, Optional, Type, Union
+from signalr_async.messages import InvocationBase
 
 
 class MessageTypes(IntEnum):
@@ -22,11 +23,8 @@ class HubMessageBase(ABC):
 
 
 @dataclass
-class InvocationMessage(HubMessageBase):
-    target: str
-    arguments: List[Any]
+class InvocationMessage(HubMessageBase, InvocationBase):
     headers: Optional[Dict[str, Any]] = None
-    invocation_id: Optional[str] = None
     stream_ids: List[str] = field(default_factory=list)
 
     @property

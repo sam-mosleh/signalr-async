@@ -2,7 +2,7 @@ import json
 from typing import Any, Dict, Generator, Union
 
 from signalr_async.signalrcore.messages import HubMessage, message_type_to_class
-
+from dataclasses import asdict
 from .base import ProtocolBase
 
 
@@ -45,7 +45,7 @@ class JsonProtocol(ProtocolBase[str]):
     def write(self, message: HubMessage) -> str:
         output = {
             self.aliases_reversed.get(key, key): val
-            for key, val in message.__dict__.items()
+            for key, val in asdict(message).items()
             if val is not None
         }
         output["type"] = message.message_type

@@ -11,7 +11,8 @@ from .messages import PingMessage, HubMessage
 from .protocols import JsonProtocol, ProtocolBase
 
 
-class SignalRCoreConnection(ConnectionBase):
+# TODO: select transferables instead of all HubMessages
+class SignalRCoreConnection(ConnectionBase[HubMessage, HubMessage]):
     negotiate_version: str = "1"
 
     def __init__(

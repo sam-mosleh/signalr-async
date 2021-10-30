@@ -3,6 +3,7 @@ import json
 from pytest_mock import MockFixture
 
 from signalr_async.signalr import SignalRConnection
+from signalr_async.signalr.messages import HubResult
 
 
 def test_common_params():
@@ -56,8 +57,12 @@ def test_read_message(mocker: MockFixture):
     conn = SignalRConnection(url)
     assert conn.groups_token is None
     assert conn.message_id is None
-    data = {"C": message_id, "G": groups_token, "M": None}
-    assert conn._read_message(json.dumps(data)) == data
+    data = {"C": message_id, "G": groups_token, "M": []}
+    assert conn._read_message(json.dumps(data)) == []
+    data = {"R": "abc", "I": "0"}
+    assert conn._read_message(json.dumps(data)) == [
+        HubResult(invocation_id=data["I"], result=data["R"])
+    ]
     assert conn.groups_token == groups_token
     assert conn.message_id == message_id
 
@@ -66,6 +71,7 @@ def test_write_message(mocker: MockFixture):
     url = "http://localhost"
     conn = SignalRConnection(url)
     message = mocker.MagicMock()
+    message.to_raw_message.return_value = mocker.MagicMock()
     mock_json_dumps = mocker.patch("json.dumps", return_value=mocker.MagicMock())
     assert conn._write_message(message) == (mock_json_dumps.return_value, False)
-    mock_json_dumps.assert_called_once_with(message)
+    mock_json_dumps.assert_called_once_with(message.to_raw_message.return_value)

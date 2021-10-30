@@ -1,78 +1,3 @@
-# {
-#     MessageId: minPersistentResponse.C,
-#     Messages: minPersistentResponse.M,
-#     Initialized: typeof (minPersistentResponse.S) !== "undefined" ? true : false,
-#     ShouldReconnect: typeof (minPersistentResponse.T) !== "undefined" ? true : false,
-#     LongPollDelay: minPersistentResponse.L,
-#     GroupsToken: minPersistentResponse.G,
-#     Error: minPersistentResponse.E
-# };
-
-# $(connection).triggerHandler(signalR.events.onError, [signalR._.error(minData.E, /* source */ "ServerError")]);
-# if(minData && (typeof minData.I !== "undefined")) $(connection).triggerHandler(events.onReceived, [data]);
-# $.each(minData.M, function (index, message) transportLogic.triggerReceived(connection, message);
-# I == Completion
-
-# HUB_INVOCATION
-# [JsonProperty("H")]
-# public string Hub { get; set; }
-# [JsonProperty("M")]
-# public string Method { get; set; }
-# [JsonProperty("I")]
-# public string Id { get; set; }
-# [JsonProperty("S")]
-# public JRaw State { get; set; }
-# [JsonProperty("A")]
-# public JRaw[] Args { get; set; }
-
-# HUB_RESULT
-# /// <summary>
-# /// The callback identifier
-# /// </summary>
-# [JsonProperty("I")]
-# public string Id { get; set; }
-
-# /// <summary>
-# /// The progress update of the invocation
-# /// </summary>
-# [JsonProperty("P")]
-# public HubProgressUpdate ProgressUpdate { get; set; }
-
-# /// <summary>
-# /// The return value of the hub
-# /// </summary>
-# [JsonProperty("R")]
-# public JToken Result { get; set; }
-
-# /// <summary>
-# /// Indicates whether the Error is a <see cref="HubException"/>.
-# /// </summary>
-# [JsonProperty("H")]
-# public bool? IsHubException { get; set; }
-
-# /// <summary>
-# /// The error message returned from the hub invocation.
-# /// </summary>
-# [JsonProperty("E")]
-# public string Error { get; set; }
-
-# /// <summary>
-# /// Extra error data
-# /// </summary>
-# [JsonProperty("D")]
-# public object ErrorData { get; set; }
-
-# /// <summary>
-# /// The caller state from this hub.
-# /// </summary>
-# [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly", Justification = "Type is used for serialization.")]
-# [JsonProperty("S")]
-# public IDictionary<string, JToken> State { get; set; }
-
-# if "P" in message => message: HUB_RESULT
-# else if "I" in message => message: HUB_RESULT
-# else message: HUB_INVOCATION
-
 import asyncio
 from typing import Dict, List, Optional, Any
 
@@ -81,14 +6,17 @@ from signalr_async.client import SignalRClientBase
 from .connection import SignalRConnection
 from .hub import SignalRHub
 from .invoke_manager import SignalRInvokeManager
+from .messages import HubResult, HubInvocation, HubMessage
 
 
-class SignalRClient(SignalRClientBase[List[SignalRHub]]):
+class SignalRClient(SignalRClientBase[List[SignalRHub], HubInvocation, HubMessage]):
     def build_connection(
         self,
         base_url: str,
         connection_options: Dict[str, Any],
     ) -> SignalRConnection:
+        # TODO: Fix in base
+        self._hub_dict = {h.name: h for h in self._hub}
         return SignalRConnection(
             base_url=base_url,
             hub_names=[hub.name for hub in self._hub],
@@ -112,8 +40,24 @@ class SignalRClient(SignalRClientBase[List[SignalRHub]]):
         for hub in self._hub:
             asyncio.create_task(hub.on_disconnect())
 
-    def _get_message_id(self, message: Dict[str, Any]) -> str:
-        return message["I"]  # type: ignore
-
-    async def _process_message(self, message: Dict[str, Any]) -> None:
-        print("MESSAGE", message)
+    async def _process_message(self, message: HubMessage) -> None:
+        if isinstance(message, HubResult):
+            if message.progress_update:
+                self.logger.error(
+                    f"ProgressUpdate messages are not implemented: {message}"
+                )
+            elif message.result:
+                self._invoke_manager.set_invocation_result(
+                    message.invocation_id, message.result
+                )
+            elif message.error:
+                self._invoke_manager.set_invocation_exception(
+                    message.invocation_id, message.error
+                )
+            else:
+                self.logger.error(f"Bad HubResult: {message}")
+        elif isinstance(message, HubInvocation):
+            if message.hub:
+                await self._hub_dict[message.hub]._call(
+                    message.target, message.arguments
+                )

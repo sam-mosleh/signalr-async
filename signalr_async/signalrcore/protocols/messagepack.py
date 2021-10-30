@@ -15,6 +15,7 @@ from signalr_async.signalrcore.messages import (
 )
 
 from .base import ProtocolBase
+from signalr_async.exceptions import InvalidMessage
 
 
 class MessagePackProtocol(ProtocolBase[bytes]):
@@ -44,22 +45,22 @@ class MessagePackProtocol(ProtocolBase[bytes]):
             read_byte = message[offset + num_bytes]
             size = size | ((read_byte & 0x7F) << 7 * num_bytes)
             num_bytes += 1
-            if (read_byte & 0x80) == 0:
-                return num_bytes, size
-            elif num_bytes >= total_readable_bytes:
-                raise Exception("Cant read message size.")
-            elif num_bytes == self.max_length_prefix_size:
-                if read_byte > 7:
-                    raise Exception("Messages bigger than 2GB are not supported.")
+            if num_bytes == self.max_length_prefix_size:
+                if read_byte > 3:
+                    raise InvalidMessage("Messages bigger than 2GB are not supported.")
                 else:
                     return num_bytes, size
+            elif (read_byte & 0x80) == 0:
+                return num_bytes, size
+            elif num_bytes >= total_readable_bytes:
+                raise InvalidMessage("Cant read message size.")
 
     def decode(self, raw_messages: bytes) -> Generator[List[Any], None, None]:
         offset = 0
         while offset < len(raw_messages):
             num_bytes, size = self._get_size(raw_messages, offset)
             if offset + num_bytes + size > len(raw_messages):
-                raise Exception("Incomplete message.")
+                raise InvalidMessage("Incomplete message.")
             yield msgpack.unpackb(
                 raw_messages[offset + num_bytes : offset + num_bytes + size]
             )
@@ -96,7 +97,7 @@ class MessagePackProtocol(ProtocolBase[bytes]):
                     allow_reconnect=message[2] if len(message) >= 3 else None,
                 )
             else:
-                raise Exception("Unknown message")
+                raise RuntimeError("Unknown message")
 
     def encode(self, output: List[Any]) -> bytes:
         encoded_output = msgpack.packb(output)
@@ -161,5 +162,5 @@ class MessagePackProtocol(ProtocolBase[bytes]):
                 message.invocation_id,
             ]
         else:
-            raise Exception("Unknown message type")
+            raise RuntimeError("Unknown message type")
         return self.encode(output)

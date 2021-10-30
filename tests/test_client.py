@@ -1,3 +1,4 @@
+from typing import Any
 from signalr_async.client import SignalRClientBase
 import pytest
 from pytest_mock import MockerFixture
@@ -6,7 +7,7 @@ from pytest_mock import MockerFixture
 pytestmark = pytest.mark.asyncio
 
 
-class DummySignalRClient(SignalRClientBase):
+class DummySignalRClient(SignalRClientBase[Any, Any, Any]):
     def build_connection(self, base_url, connection_options):
         pass
 
@@ -17,9 +18,6 @@ class DummySignalRClient(SignalRClientBase):
         pass
 
     async def _disconnection_event(self):
-        pass
-
-    def _get_message_id(self, message):
         pass
 
     async def _process_message(self, message):
