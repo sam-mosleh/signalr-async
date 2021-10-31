@@ -1,18 +1,34 @@
-class ConnectionError(Exception):
+class AsyncSignalRException(Exception):
     pass
 
 
-class ConnectionInitializationError(ConnectionError):
+class AsyncSignalRConnectionError(AsyncSignalRException, ConnectionError):
     pass
 
 
-class ConnectionStartError(ConnectionError):
+class ConnectionInitializationError(AsyncSignalRConnectionError):
     pass
 
 
-class IncompatibleServerError(ConnectionError):
+class HandshakeError(ConnectionInitializationError):
     pass
 
 
-class ServerInvokationException(Exception):
+class IncompatibleServerError(AsyncSignalRConnectionError):
+    pass
+
+
+class ConnectionClosed(AsyncSignalRConnectionError):
+    pass
+
+
+class ServerInvocationException(AsyncSignalRException):
+    pass
+
+
+class MessageError(AsyncSignalRException):
+    pass
+
+
+class InvalidMessage(MessageError):
     pass

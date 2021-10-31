@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "signalr-async"
-version = "1.2.1"
+version = "2.0.1"
 description = "Python SignalR async client"
 authors = ["Sam Mosleh <sam.mosleh@ut.ac.ir>"]
 readme = "README.md"
@@ -11,7 +11,6 @@ keywords = ["SignalR", "SignalR client", "Real-time messaging"]
 [tool.poetry.dependencies]
 python = "^3.8"
 aiohttp = "^3.6.0"
-websockets = "^8.1"
 msgpack = "^1.0.2"
 
 [tool.poetry.dev-dependencies]
@@ -21,6 +20,38 @@ pre-commit = "^2.9.3"
 black = "^21.6b0"
 isort = "^5.9.1"
 autoflake = "^1.4"
+pytest-asyncio = "^0.16.0"
+aioresponses = "^0.7.2"
+pytest-mock = "^3.6.1"
+msgpack-types = "^0.2.0"
+mypy = "^0.910"
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+# --strict
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+implicit_reexport = false
+strict_equality = true
+# --strict end
+
+[tool.pytest.ini_options]
+addopts = [
+  "--strict-config",
+  "--strict-markers",
+]
+xfail_strict = true
 
 [build-system]
 requires = ["poetry>=0.12"]

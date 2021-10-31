@@ -1,19 +1,24 @@
+from typing import Any, Generator, Sequence, Tuple
+
 import msgpack
 
-from signalr_async.core.messages import (
+from signalr_async.exceptions import InvalidMessage
+from signalr_async.netcore.messages import (
+    CancelInvocationMessage,
     CloseMessage,
     CompletionMessage,
-    HubMessageBase,
+    HubMessage,
     InvocationMessage,
     MessageTypes,
     PingMessage,
+    StreamInvocationMessage,
     StreamItemMessage,
 )
 
 from .base import ProtocolBase
 
 
-class MessagePackProtocol(ProtocolBase):
+class MessagePackProtocol(ProtocolBase[bytes]):
     max_length_prefix_size: int = 5
 
     _error_result = 1
@@ -29,14 +34,10 @@ class MessagePackProtocol(ProtocolBase):
         return 1
 
     @property
-    def transfer_format(self) -> str:
-        return "Binary"
-
-    @property
     def is_binary(self) -> bool:
         return True
 
-    def _get_size(self, message: bytes, offset: int):
+    def _get_size(self, message: bytes, offset: int) -> Tuple[int, int]:
         total_readable_bytes = len(message) - offset
         num_bytes = 0
         size = 0
@@ -44,28 +45,28 @@ class MessagePackProtocol(ProtocolBase):
             read_byte = message[offset + num_bytes]
             size = size | ((read_byte & 0x7F) << 7 * num_bytes)
             num_bytes += 1
-            if (read_byte & 0x80) == 0:
-                return num_bytes, size
-            elif num_bytes >= total_readable_bytes:
-                raise Exception("Cant read message size.")
-            elif num_bytes == self.max_length_prefix_size:
-                if read_byte > 7:
-                    raise Exception("Messages bigger than 2GB are not supported.")
+            if num_bytes == self.max_length_prefix_size:
+                if read_byte > 3:
+                    raise InvalidMessage("Messages bigger than 2GB are not supported.")
                 else:
                     return num_bytes, size
+            elif (read_byte & 0x80) == 0:
+                return num_bytes, size
+            elif num_bytes >= total_readable_bytes:
+                raise InvalidMessage("Cant read message size.")
 
-    def decode(self, raw_messages: bytes):
+    def decode(self, raw_messages: bytes) -> Generator[Sequence[Any], None, None]:
         offset = 0
         while offset < len(raw_messages):
             num_bytes, size = self._get_size(raw_messages, offset)
             if offset + num_bytes + size > len(raw_messages):
-                raise Exception("Incomplete message.")
+                raise InvalidMessage("Incomplete message.")
             yield msgpack.unpackb(
                 raw_messages[offset + num_bytes : offset + num_bytes + size]
             )
             offset += num_bytes + size
 
-    def parse(self, raw_messages: bytes):
+    def parse(self, raw_messages: bytes) -> Generator[HubMessage, None, None]:
         for message in self.decode(raw_messages):
             message_type = message[0]
             if message_type == MessageTypes.INVOCATION:
@@ -96,9 +97,9 @@ class MessagePackProtocol(ProtocolBase):
                     allow_reconnect=message[2] if len(message) >= 3 else None,
                 )
             else:
-                raise Exception("Unknown message")
+                raise RuntimeError("Unknown message")
 
-    def encode(self, output: list):
+    def encode(self, output: Sequence[Any]) -> bytes:
         encoded_output = msgpack.packb(output)
         size = len(encoded_output)
         length_prefix = b""
@@ -110,51 +111,56 @@ class MessagePackProtocol(ProtocolBase):
             length_prefix += size_part.to_bytes(1, "big")
         return length_prefix + encoded_output
 
-    def write(self, message: HubMessageBase):
-        if message.type_ == MessageTypes.INVOCATION:
+    def write(self, message: HubMessage) -> bytes:
+        output: Sequence[Any]
+        if isinstance(message, InvocationMessage):
             output = [
-                message.type_,
+                message.message_type,
                 message.headers,
                 message.invocation_id,
                 message.target,
                 message.arguments,
                 message.stream_ids,
             ]
-        elif message.type_ == MessageTypes.STREAM_INVOCATION:
+        elif isinstance(message, StreamInvocationMessage):
             output = [
-                message.type_,
+                message.message_type,
                 message.headers,
                 message.invocation_id,
                 message.target,
                 message.arguments,
                 message.stream_ids,
             ]
-        elif message.type_ == MessageTypes.STREAM_ITEM:
+        elif isinstance(message, StreamItemMessage):
             output = [
-                message.type_,
+                message.message_type,
                 message.headers,
                 message.invocation_id,
                 message.item,
             ]
-        elif message.type_ == MessageTypes.COMPLETION:
+        elif isinstance(message, CompletionMessage):
             result_kind = (
                 self._error_result
                 if message.error
                 else (self._non_void_result if message.result else self._void_result)
             )
             output = [
-                message.type_,
+                message.message_type,
                 message.headers,
                 message.invocation_id,
                 result_kind,
             ]
+            output.append(result_kind)
             if result_kind != self._void_result:
                 output.append(message.error or message.result)
-        elif message.type_ == MessageTypes.PING:
-            output = [message.type_]
-        elif message.type_ == MessageTypes.CANCEL_INVOCATION:
-            message: CancelInvocationMessage
-            output = [message.type_, message.headers, message.invocation_id]
+        elif isinstance(message, PingMessage):
+            output = [message.message_type]
+        elif isinstance(message, CancelInvocationMessage):
+            output = [
+                message.message_type,
+                message.headers,
+                message.invocation_id,
+            ]
         else:
-            raise Exception("Unknown message type")
+            raise RuntimeError("Unknown message type")
         return self.encode(output)
