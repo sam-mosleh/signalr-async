@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "signalr-async"
-version = "2.0.1"
+version = "2.0.2"
 description = "Python SignalR async client"
 authors = ["Sam Mosleh <sam.mosleh@ut.ac.ir>"]
 readme = "README.md"
