@@ -28,7 +28,7 @@ jobs:
         - pip install --upgrade pip
         - pip install poetry
         - poetry --version
-        - poetry config settings.virtualenvs.in-project true
+        - poetry config virtualenvs.create false
         - poetry install --no-root -v
       script:
         - sh ./scripts/test.sh
