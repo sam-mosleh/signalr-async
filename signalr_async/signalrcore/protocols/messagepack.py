@@ -1,4 +1,4 @@
-from typing import Any, Generator, List, Tuple
+from typing import Any, Generator, Sequence, Tuple
 
 import msgpack
 
@@ -55,7 +55,7 @@ class MessagePackProtocol(ProtocolBase[bytes]):
             elif num_bytes >= total_readable_bytes:
                 raise InvalidMessage("Cant read message size.")
 
-    def decode(self, raw_messages: bytes) -> Generator[List[Any], None, None]:
+    def decode(self, raw_messages: bytes) -> Generator[Sequence[Any], None, None]:
         offset = 0
         while offset < len(raw_messages):
             num_bytes, size = self._get_size(raw_messages, offset)
@@ -99,7 +99,7 @@ class MessagePackProtocol(ProtocolBase[bytes]):
             else:
                 raise RuntimeError("Unknown message")
 
-    def encode(self, output: List[Any]) -> bytes:
+    def encode(self, output: Sequence[Any]) -> bytes:
         encoded_output = msgpack.packb(output)
         size = len(encoded_output)
         length_prefix = b""
@@ -112,7 +112,7 @@ class MessagePackProtocol(ProtocolBase[bytes]):
         return length_prefix + encoded_output
 
     def write(self, message: HubMessage) -> bytes:
-        output: List[Any]
+        output: Sequence[Any]
         if isinstance(message, InvocationMessage):
             output = [
                 message.message_type,

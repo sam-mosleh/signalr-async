@@ -19,7 +19,7 @@ class DummyConnection(ConnectionBase[Any, Any]):
     async def _initialize_connection(self):
         pass
 
-    def _read_message(self, data) -> Any:
+    def _read_message(self, data):
         pass
 
     def _write_message(self, message):

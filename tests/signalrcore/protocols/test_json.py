@@ -5,7 +5,7 @@ handshake_dict = {"protocol": "json", "version": 1}
 encoded_handshake = '{"protocol": "json", "version": 1}\x1e'
 ping = PingMessage()
 encoded_ping = '{"type": 6}\x1e'
-completion = CompletionMessage(invocation_id="1", result=True)
+completion = CompletionMessage(invocation_id="1", headers={}, result=True, error=None)
 encoded_completion = '{"type": 3, "invocation_id": "1", "result": true}\x1e'
 
 

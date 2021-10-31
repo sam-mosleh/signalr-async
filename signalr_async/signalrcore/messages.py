@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, Optional, Sequence, Type, Union
 
 from signalr_async.messages import InvocationBase
 
@@ -24,9 +24,17 @@ class HubMessageBase(ABC):
 
 
 @dataclass
+class HubInvocableMessageBase(InvocationBase):
+    invocation_id: str
+    headers: Dict[str, Any]
+
+
+@dataclass
 class InvocationMessage(HubMessageBase, InvocationBase):
-    headers: Optional[Dict[str, Any]] = None
-    stream_ids: List[str] = field(default_factory=list)
+    target: str
+    arguments: Sequence[Any]
+    headers: Dict[str, Any]
+    stream_ids: Sequence[str]
 
     @property
     def message_type(self) -> MessageTypes:
@@ -34,10 +42,8 @@ class InvocationMessage(HubMessageBase, InvocationBase):
 
 
 @dataclass
-class StreamItemMessage(HubMessageBase):
-    invocation_id: str
+class StreamItemMessage(HubMessageBase, HubInvocableMessageBase):
     item: Dict[str, Any]
-    headers: Optional[Dict[str, Any]] = None
 
     @property
     def message_type(self) -> MessageTypes:
@@ -45,11 +51,9 @@ class StreamItemMessage(HubMessageBase):
 
 
 @dataclass
-class CompletionMessage(HubMessageBase):
-    invocation_id: str
-    headers: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
-    result: Optional[Dict[str, Any]] = None
+class CompletionMessage(HubMessageBase, HubInvocableMessageBase):
+    error: Optional[str]
+    result: Optional[Dict[str, Any]]
 
     @property
     def message_type(self) -> MessageTypes:
@@ -57,12 +61,10 @@ class CompletionMessage(HubMessageBase):
 
 
 @dataclass
-class StreamInvocationMessage(HubMessageBase):
-    invocation_id: str
+class StreamInvocationMessage(HubMessageBase, HubInvocableMessageBase):
     target: str
-    arguments: List[Any]
-    stream_ids: List[Any]
-    headers: Optional[Dict[str, Any]] = None
+    arguments: Sequence[Any]
+    stream_ids: Sequence[Any]
 
     @property
     def message_type(self) -> MessageTypes:
@@ -70,10 +72,7 @@ class StreamInvocationMessage(HubMessageBase):
 
 
 @dataclass
-class CancelInvocationMessage(HubMessageBase):
-    invocation_id: str
-    headers: Optional[Dict[str, Any]] = None
-
+class CancelInvocationMessage(HubMessageBase, HubInvocableMessageBase):
     @property
     def message_type(self) -> MessageTypes:
         return MessageTypes.CANCEL_INVOCATION
@@ -88,8 +87,8 @@ class PingMessage(HubMessageBase):
 
 @dataclass
 class CloseMessage(HubMessageBase):
-    error: Optional[str] = None
-    allow_reconnect: Optional[bool] = None
+    error: Optional[str]
+    allow_reconnect: Optional[bool]
 
     @property
     def message_type(self) -> MessageTypes:
@@ -104,6 +103,14 @@ HubMessage = Union[
     CancelInvocationMessage,
     PingMessage,
     CloseMessage,
+]
+
+HubInvocableMessage = Union[
+    InvocationMessage,
+    StreamItemMessage,
+    CompletionMessage,
+    StreamInvocationMessage,
+    CancelInvocationMessage,
 ]
 
 message_type_to_class: Dict[MessageTypes, Type[HubMessage]] = {

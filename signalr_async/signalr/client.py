@@ -1,15 +1,16 @@
 import asyncio
-from typing import Any, Dict, List
+from typing import Any, Dict, Sequence
 
 from signalr_async.client import SignalRClientBase
 
 from .connection import SignalRConnection
 from .hub import SignalRHub
-from .invoke_manager import SignalRInvokeManager
+
+# from .invoke_manager import SignalRInvokeManager
 from .messages import HubInvocation, HubMessage, HubResult
 
 
-class SignalRClient(SignalRClientBase[List[SignalRHub], HubInvocation, HubMessage]):
+class SignalRClient(SignalRClientBase[Sequence[SignalRHub], HubMessage, HubInvocation]):
     def build_connection(
         self,
         base_url: str,
@@ -24,12 +25,6 @@ class SignalRClient(SignalRClientBase[List[SignalRHub], HubInvocation, HubMessag
             extra_headers=connection_options.get("extra_headers"),
             logger=self.logger,
         )
-
-    def build_invoke_manager(self) -> SignalRInvokeManager:
-        invoke_manager = SignalRInvokeManager(self._producer_queue)
-        for hub in self._hub:
-            hub._set_invoke_manager(invoke_manager)._set_logger(self.logger)
-        return invoke_manager
 
     async def _connection_event(self) -> None:
         if self._connection.connection_id:

@@ -1,10 +1,18 @@
-from typing import Any, Dict
+from typing import Any, Sequence
 
 from signalr_async.hub import HubBase
 
+from .messages import InvocationMessage
 
-class SignalRCoreHub(HubBase):
-    async def invoke(self, method: str, *args: Any) -> Dict[str, Any]:
-        if self._invoke_manager is None:
-            raise RuntimeError(f"Hub {self.name} is not registered")
-        return await self._invoke_manager.invoke(method, args)
+
+class SignalRCoreHub(HubBase[InvocationMessage]):
+    def _create_invocation_message(
+        self, invocation_id: str, method: str, args: Sequence[Any]
+    ) -> InvocationMessage:
+        return InvocationMessage(
+            invocation_id=invocation_id,
+            target=method,
+            arguments=args or tuple(),
+            headers={},
+            stream_ids=tuple(),
+        )

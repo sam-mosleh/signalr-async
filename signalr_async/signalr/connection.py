@@ -39,7 +39,7 @@ class CommandEnum(str, Enum):
     ABORT = "abort"
 
 
-class SignalRConnection(ConnectionBase[HubMessage, Optional[HubInvocation]]):
+class SignalRConnection(ConnectionBase[HubMessage, HubInvocation]):
     client_protocol_version: str = "1.5"
 
     def __init__(
@@ -55,6 +55,7 @@ class SignalRConnection(ConnectionBase[HubMessage, Optional[HubInvocation]]):
         self.message_id: Optional[str] = None
         self.groups_token: Optional[str] = None
         self.keepalive_timeout: Optional[int] = None
+        self._ping_message = "{}"
 
     def _common_params(self) -> Dict[str, str]:
         connection_data = [{"name": hub_name} for hub_name in self._hub_names]
@@ -154,9 +155,7 @@ class SignalRConnection(ConnectionBase[HubMessage, Optional[HubInvocation]]):
             self.logger.error(f"Whats this: {raw_message}")
         return []
 
-    def _write_message(
-        self, message: Optional[HubInvocation]
-    ) -> Tuple[Union[str, bytes], bool]:
+    def _write_message(self, message: HubInvocation) -> Tuple[Union[str, bytes], bool]:
         return json.dumps(message.to_raw_message() if message else {}), False
 
     async def _clear_connection_data(self) -> None:
@@ -166,4 +165,4 @@ class SignalRConnection(ConnectionBase[HubMessage, Optional[HubInvocation]]):
         self.message_id = None
 
     async def ping(self) -> None:
-        return await self.send(None)
+        return await self._send_raw(self._ping_message, False)

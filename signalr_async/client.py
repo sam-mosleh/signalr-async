@@ -3,22 +3,24 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import Any, Dict, Generic, List, Optional, Type, TypeVar
+from typing import Any, Dict, Generic, List, Optional, Sequence, Type, TypeVar, Union
 
 from .connection import ConnectionBase
 from .exceptions import ConnectionClosed, ConnectionInitializationError
-from .invoke_manager import InvokeManagerBase
+from .hub import HubBase
+from .invoke_manager import InvokeManager
 from .messages import InvocationBase
 
-# Type of hub
-H = TypeVar("H")
 # Type of Invoke message which is in queue
 I = TypeVar("I", bound=InvocationBase)
+# Type of hub
+# H = TypeVar("H")
+H = TypeVar("H", bound=Union[HubBase[Any], Sequence[HubBase[Any]]])
 # Type of all Messages received
 R = TypeVar("R")
 
 
-class SignalRClientBase(ABC, Generic[H, I, R]):
+class SignalRClientBase(ABC, Generic[H, R, I]):
     def __init__(
         self,
         base_url: str,
@@ -34,28 +36,23 @@ class SignalRClientBase(ABC, Generic[H, I, R]):
         self.reconnect_policy = reconnect_policy
         self.timeout = timeout
         self.keepalive_interval = keepalive_interval
-        self._producer_queue: "asyncio.Queue" = asyncio.Queue()
-        # self._consumer_task: Optional[asyncio.Task] = None
-        # self._producer_task: Optional[asyncio.Task] = None
-        # self._timeout_task: Optional[asyncio.Task] = None
-        # self._keepalive_task: Optional[asyncio.Task] = None
-        self._all_tasks: List[asyncio.Task] = []
-        self._connection: ConnectionBase[R, I] = self.build_connection(
-            base_url, connection_options or {}
-        )
-        self._invoke_manager = self.build_invoke_manager()
+        self._all_tasks: List["asyncio.Task[None]"] = []
+        self._producer_queue: "asyncio.Queue[I]" = asyncio.Queue()
+        self._invoke_manager = InvokeManager(self._producer_queue)
+        self._connection = self.build_connection(base_url, connection_options or {})
+        if isinstance(self._hub, Sequence):
+            for h in self._hub:
+                h._set_invoke_manager(self._invoke_manager)._set_logger(self.logger)
+        else:
+            self._hub._set_invoke_manager(self._invoke_manager)._set_logger(self.logger)
 
     @abstractmethod
     def build_connection(
         self, base_url: str, connection_options: Dict[str, Any]
-    ) -> ConnectionBase:
+    ) -> ConnectionBase[R, I]:
         """Build new connection"""
 
-    @abstractmethod
-    def build_invoke_manager(self) -> InvokeManagerBase:
-        """Build invoke manager and connect hubs to it"""
-
-    async def __aenter__(self) -> "SignalRClientBase":
+    async def __aenter__(self) -> "SignalRClientBase[H, R, I]":
         await self.start()
         return self
 
@@ -87,8 +84,8 @@ class SignalRClientBase(ABC, Generic[H, I, R]):
         for task in self._all_tasks:
             task.cancel()
         gather = await asyncio.gather(*self._all_tasks, return_exceptions=True)
-        self.logger.debug(f"{gather=}")
         self._all_tasks.clear()
+        self.logger.debug(f"{gather=}")
 
     @abstractmethod
     async def _connection_event(self) -> None:
@@ -100,7 +97,7 @@ class SignalRClientBase(ABC, Generic[H, I, R]):
 
     async def _producer(self) -> None:
         while True:
-            message: I = await self._producer_queue.get()
+            message = await self._producer_queue.get()
             if message.invocation_id:
                 try:
                     await self._connection.send(message)

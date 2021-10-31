@@ -5,11 +5,13 @@ from signalr_async.client import SignalRClientBase
 
 from .connection import SignalRCoreConnection
 from .hub import SignalRCoreHub
-from .invoke_manager import SignalRCoreInvokeManager
+
+# from .invoke_manager import SignalRCoreInvokeManager
 from .messages import (
     CancelInvocationMessage,
     CloseMessage,
     CompletionMessage,
+    HubInvocableMessage,
     HubMessage,
     InvocationMessage,
     PingMessage,
@@ -19,7 +21,7 @@ from .messages import (
 
 
 class SignalRCoreClient(
-    SignalRClientBase[SignalRCoreHub, InvocationMessage, HubMessage]
+    SignalRClientBase[SignalRCoreHub, HubMessage, HubInvocableMessage]
 ):
     def build_connection(
         self,
@@ -34,11 +36,6 @@ class SignalRCoreClient(
             extra_headers=connection_options.get("extra_headers"),
             logger=self.logger,
         )
-
-    def build_invoke_manager(self) -> SignalRCoreInvokeManager:
-        invoke_manager = SignalRCoreInvokeManager(self._producer_queue)
-        self._hub._set_invoke_manager(invoke_manager)._set_logger(self.logger)
-        return invoke_manager
 
     async def _connection_event(self) -> None:
         if self._connection.connection_id:

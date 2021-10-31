@@ -1,9 +1,7 @@
 from dataclasses import dataclass
-from typing import Any, List, Optional
+from typing import Optional
 
 
 @dataclass
 class InvocationBase:
-    target: str
-    arguments: List[Any]
-    invocation_id: Optional[str] = None
+    invocation_id: Optional[str]

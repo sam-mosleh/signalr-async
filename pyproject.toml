@@ -31,7 +31,7 @@ profile = "black"
 
 [tool.mypy]
 # --strict
-# disallow_any_generics = true
+disallow_any_generics = true
 disallow_subclassing_any = true
 disallow_untyped_calls = true
 disallow_untyped_defs = true

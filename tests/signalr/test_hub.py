@@ -2,6 +2,7 @@ import pytest
 from pytest_mock import MockFixture
 
 from signalr_async.signalr.hub import SignalRHub
+from signalr_async.signalr.messages import HubInvocation
 
 pytestmark = pytest.mark.asyncio
 
@@ -12,11 +13,12 @@ async def test_unregistered_signalr_hub_invoke():
         await h.invoke(None)
 
 
-async def test_registered_signalr_hub_invoke(mocker: MockFixture):
+async def test_registered_signalr_hub_invoke_message(mocker: MockFixture):
     hub_name = "myhub"
+    invocation_id = "1000"
     method = "mymethod"
     args = (1, True)
-    invoke_manager = mocker.AsyncMock()
-    h = SignalRHub(hub_name)._set_invoke_manager(invoke_manager)
-    await h.invoke(method, *args)
-    invoke_manager.invoke.assert_awaited_once_with(hub_name, method, args)
+    hub = SignalRHub(hub_name)
+    assert hub._create_invocation_message(invocation_id, method, args) == HubInvocation(
+        invocation_id, hub_name, method, args
+    )

@@ -1,40 +1,60 @@
 import asyncio
 import logging
 from abc import abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Generic,
+    Optional,
+    Sequence,
+    TypeVar,
+    Union,
+)
 
-from .invoke_manager import InvokeManagerBase
+from typing_extensions import TypeGuard
+
+from .invoke_manager import InvokeManager
+from .messages import InvocationBase
+
+SyncFunctionType = Callable[..., None]
+AsyncFunctionType = Callable[..., Awaitable[None]]
+CallbackType = Union[SyncFunctionType, AsyncFunctionType]
+DecoratorType = Callable[[CallbackType], CallbackType]
+
+I = TypeVar("I", bound=InvocationBase)
 
 
-class HubBase:
+class HubBase(Generic[I]):
     def __init__(self, name: Optional[str] = None):
         self.name: str = name or type(self).__name__
-        self._invoke_manager: Optional[InvokeManagerBase] = None
+        self._invoke_manager: Optional[InvokeManager[I]] = None
         self._logger: Optional[logging.Logger] = None
-        self._callbacks: Dict[str, Callable] = {}
+        self._callbacks: Dict[str, CallbackType] = {}
         for name in dir(self):
             if name.startswith("on_"):
                 event_name = name[len("on_") :]
                 self.on(event_name, getattr(self, name))
 
     def on(
-        self, name: str, callback: Optional[Callable] = None
-    ) -> Union[Callable, Callable[[Callable], Callable]]:
-        def set_callback_decorator(callback: Callable) -> Callable:
+        self, name: str, callback: Optional[CallbackType] = None
+    ) -> Union[CallbackType, DecoratorType]:
+        def set_callback_decorator(callback: CallbackType) -> CallbackType:
             self._callbacks[name] = callback
             return callback
 
         return set_callback_decorator(callback) if callback else set_callback_decorator
 
-    def _set_invoke_manager(self, invoke_manager: InvokeManagerBase) -> "HubBase":
+    def _set_invoke_manager(self, invoke_manager: InvokeManager[I]) -> "HubBase[I]":
         self._invoke_manager = invoke_manager
         return self
 
-    def _set_logger(self, logger: logging.Logger) -> "HubBase":
+    def _set_logger(self, logger: logging.Logger) -> "HubBase[I]":
         self._logger = logger
         return self
 
-    async def _call(self, method_name: str, args: List[Any]) -> None:
+    async def _call(self, method_name: str, args: Sequence[Any]) -> None:
         callback = self._callbacks.get(method_name)
         if callback is not None:
             asyncio.create_task(self._async_callback(callback, args))
@@ -43,16 +63,32 @@ class HubBase:
                 f"Method {method_name} doesnt exist in hub {self.name}"
             )
 
-    async def _async_callback(self, callback: Callable, args: List[Any]) -> Any:
-        if asyncio.iscoroutinefunction(callback):
+    def _is_coroutine_function(
+        self, callback: CallbackType
+    ) -> TypeGuard[AsyncFunctionType]:
+        return asyncio.iscoroutinefunction(callback)
+
+    async def _async_callback(self, callback: CallbackType, args: Sequence[Any]) -> Any:
+        if self._is_coroutine_function(callback):
             return await callback(*args)
         else:
             loop = asyncio.get_running_loop()
             return await loop.run_in_executor(None, callback, *args)
 
+    async def invoke(self, method: str, *args: Any) -> Any:
+        if self._invoke_manager is None:
+            raise RuntimeError(f"Hub {self.name} is not registered")
+        invocation_id = self._invoke_manager.next_invocation_id()
+        message = self._create_invocation_message(invocation_id, method, args)
+        return await self._invoke_manager.invoke_and_wait_for_result(
+            invocation_id, message
+        )
+
     @abstractmethod
-    async def invoke(self, method: str, *args: Any) -> Dict[str, Any]:
-        """Invoke a method of server"""
+    def _create_invocation_message(
+        self, invocation_id: str, method: str, args: Sequence[Any]
+    ) -> I:
+        pass
 
     async def on_connect(self, connection_id: str) -> None:
         """Connect event"""

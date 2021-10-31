@@ -1,13 +1,14 @@
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Sequence, Union
 
 from signalr_async.messages import InvocationBase
 
 
 @dataclass
 class HubInvocation(InvocationBase):
-    # TODO: remove hub default empty value
-    hub: Optional[str] = None
+    hub: str
+    target: str
+    arguments: Sequence[Any]
     state: Optional[Dict[str, Any]] = None
 
     @classmethod

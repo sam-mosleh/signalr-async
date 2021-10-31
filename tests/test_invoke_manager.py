@@ -4,27 +4,22 @@ import pytest
 from pytest_mock import MockerFixture
 
 from signalr_async.exceptions import ServerInvocationException
-from signalr_async.invoke_manager import InvokeManagerBase
+from signalr_async.invoke_manager import InvokeManager
 
 pytestmark = pytest.mark.asyncio
 
 
-class DummyInvokeManager(InvokeManagerBase):
-    async def invoke(self, *args, **kwargs):
-        pass
-
-
 def test_invoke_manager_invocation_id_creation():
-    manager = DummyInvokeManager(None)
+    manager = InvokeManager(None)
     assert manager.total_invokes == 0
-    assert manager._create_invocation_id() == "0"
+    assert manager.next_invocation_id() == "0"
     assert manager.total_invokes == 1
     assert manager.invocation_events.get("0") is not None
     assert manager.invocation_events.get("1") is None
 
 
 def test_set_invalid_result_and_exception():
-    manager = DummyInvokeManager(None)
+    manager = InvokeManager(None)
     with pytest.raises(RuntimeError):
         manager.set_invocation_result("0", None)
     with pytest.raises(RuntimeError):
@@ -33,11 +28,11 @@ def test_set_invalid_result_and_exception():
 
 async def test_invoke_putting_in_queue(mocker: MockerFixture):
     mock_queue = mocker.AsyncMock()
-    manager = DummyInvokeManager(mock_queue)
-    invocation_id = manager._create_invocation_id()
+    manager = InvokeManager(mock_queue)
+    invocation_id = manager.next_invocation_id()
     message = mocker.MagicMock()
     task = asyncio.create_task(
-        manager._invoke_and_wait_for_result(invocation_id, message)
+        manager.invoke_and_wait_for_result(invocation_id, message)
     )
     await asyncio.sleep(0)
     mock_queue.put.assert_awaited_once_with(message)
@@ -46,9 +41,9 @@ async def test_invoke_putting_in_queue(mocker: MockerFixture):
 
 async def test_invoke_with_result(mocker: MockerFixture):
     mock_queue = mocker.AsyncMock()
-    manager = DummyInvokeManager(mock_queue)
-    invocation_id = manager._create_invocation_id()
-    task = asyncio.create_task(manager._invoke_and_wait_for_result(invocation_id, None))
+    manager = InvokeManager(mock_queue)
+    invocation_id = manager.next_invocation_id()
+    task = asyncio.create_task(manager.invoke_and_wait_for_result(invocation_id, None))
     await asyncio.sleep(0)
     result = mocker.MagicMock()
     assert task.done() is False
@@ -60,11 +55,11 @@ async def test_invoke_with_result(mocker: MockerFixture):
 
 async def test_invoke_with_exception(mocker: MockerFixture):
     mock_queue = mocker.AsyncMock()
-    manager = DummyInvokeManager(mock_queue)
-    invocation_id = manager._create_invocation_id()
+    manager = InvokeManager(mock_queue)
+    invocation_id = manager.next_invocation_id()
     message = mocker.MagicMock()
     task = asyncio.create_task(
-        manager._invoke_and_wait_for_result(invocation_id, message)
+        manager.invoke_and_wait_for_result(invocation_id, message)
     )
     await asyncio.sleep(0)
     assert task.done() is False

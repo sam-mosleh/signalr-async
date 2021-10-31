@@ -12,9 +12,6 @@ class DummySignalRClient(SignalRClientBase[Any, Any, Any]):
     def build_connection(self, base_url, connection_options):
         pass
 
-    def build_invoke_manager(self):
-        pass
-
     async def _connection_event(self):
         pass
 

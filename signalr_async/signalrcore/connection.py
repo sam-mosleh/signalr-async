@@ -6,27 +6,27 @@ import yarl
 from signalr_async.connection import ConnectionBase
 from signalr_async.exceptions import HandshakeError
 
-from .messages import HubMessage, PingMessage
-from .protocols import JsonProtocol, ProtocolBase
+from .messages import HubInvocableMessage, HubMessage, PingMessage
+from .protocols import JsonProtocol, MessagePackProtocol
 
 
-# TODO: select transferables instead of all HubMessages
-class SignalRCoreConnection(ConnectionBase[HubMessage, HubMessage]):
+class SignalRCoreConnection(ConnectionBase[HubMessage, HubInvocableMessage]):
     negotiate_version: str = "1"
 
     def __init__(
         self,
         base_url: str,
         hub_name: str,
-        protocol: Optional[ProtocolBase] = None,
+        protocol: Optional[Union[JsonProtocol, MessagePackProtocol]] = None,
         extra_params: Optional[Dict[str, str]] = None,
         extra_headers: Optional[Dict[str, str]] = None,
         logger: Optional[logging.Logger] = None,
     ):
         super().__init__(base_url, [hub_name], extra_params, extra_headers, logger)
         self._url = self._base_url / hub_name
-        self.protocol: ProtocolBase = protocol or JsonProtocol()
+        self.protocol = protocol or JsonProtocol()
         self.handshake_protocol = JsonProtocol()
+        self._ping_message = self.protocol.write(PingMessage())
 
     def _common_params(self) -> Dict[str, str]:
         params = self._extra_params.copy()
@@ -84,10 +84,18 @@ class SignalRCoreConnection(ConnectionBase[HubMessage, HubMessage]):
         self.connection_token = None
 
     def _read_message(self, data: Union[str, bytes]) -> List[HubMessage]:
-        return list(self.protocol.parse(data))
+        # TODO: use self.protocol.is_binary instead of isinstance
+        if isinstance(data, str) and isinstance(self.protocol, JsonProtocol):
+            return list(self.protocol.parse(data))
+        elif isinstance(data, bytes) and isinstance(self.protocol, MessagePackProtocol):
+            return list(self.protocol.parse(data))
+        else:
+            raise RuntimeError(
+                f"Protocol type is not respected. Got {type(data)}, expected {self.protocol.transfer_format}"
+            )
 
     def _write_message(self, message: HubMessage) -> Tuple[Union[str, bytes], bool]:
         return self.protocol.write(message), self.protocol.is_binary
 
     async def ping(self) -> None:
-        return await self.send(PingMessage())
+        return await self._send_raw(self._ping_message, self.protocol.is_binary)
