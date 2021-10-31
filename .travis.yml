@@ -1,9 +1,5 @@
 language: python
 
-python:
-  - "3.8"
-  - "3.9"
-
 dist: xenial
 
 stages:
@@ -18,12 +14,16 @@ cache:
 jobs:
   include:
     - stage: lint
+      python: "3.8"
       install:
         - pip install pre-commit
         - pre-commit install-hooks
       script:
         - pre-commit run --all-files
     - stage: test
+      python:
+        - "3.8"
+        - "3.9"
       install:
         - pip install --upgrade pip
         - pip install poetry
