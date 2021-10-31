@@ -1,6 +1,6 @@
-language: python
-
+os: linux
 dist: xenial
+language: python
 
 stages:
   - lint
@@ -11,6 +11,17 @@ cache:
   directories:
     - "$HOME/.cache/pre-commit"
 
+test: &test
+  stage: test
+  install:
+    - pip install --upgrade pip
+    - pip install poetry
+    - poetry --version
+    - poetry config virtualenvs.create false
+    - poetry install --no-root -v
+  script:
+    - sh ./scripts/test.sh
+
 jobs:
   include:
     - stage: lint
@@ -20,18 +31,11 @@ jobs:
         - pre-commit install-hooks
       script:
         - pre-commit run --all-files
-    - stage: test
-      python:
-        - "3.8"
-        - "3.9"
-      install:
-        - pip install --upgrade pip
-        - pip install poetry
-        - poetry --version
-        - poetry config virtualenvs.create false
-        - poetry install --no-root -v
-      script:
-        - sh ./scripts/test.sh
+    - <<: *test
+      python: "3.8"
+    - <<: *test
+      python: "3.9"
+
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
