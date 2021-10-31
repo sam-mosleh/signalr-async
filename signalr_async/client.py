@@ -85,7 +85,7 @@ class SignalRClientBase(ABC, Generic[H, R, I]):
             task.cancel()
         gather = await asyncio.gather(*self._all_tasks, return_exceptions=True)
         self._all_tasks.clear()
-        self.logger.debug(f"gather={gather}")
+        self.logger.debug(f"{gather=}")
 
     @abstractmethod
     async def _connection_event(self) -> None:

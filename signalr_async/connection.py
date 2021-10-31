@@ -123,9 +123,7 @@ class ConnectionBase(Generic[T, O]):
     async def _send_raw(
         self, message_content: Union[str, bytes], is_binary: bool
     ) -> None:
-        self.logger.debug(
-            f"Sending: message_content={message_content}, is_binary={is_binary}"
-        )
+        self.logger.debug(f"Sending: {message_content=}, {is_binary=}")
         if self._websocket is None:
             raise ConnectionClosed() from None
         try:

@@ -9,7 +9,7 @@ homepage = "https://github.com/sam-mosleh/signalr-async"
 keywords = ["SignalR", "SignalR client", "Real-time messaging"]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 aiohttp = "^3.6.0"
 msgpack = "^1.0.2"
 
