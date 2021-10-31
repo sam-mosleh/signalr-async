@@ -38,10 +38,10 @@ class HubBase(Generic[I]):
                 self.on(event_name, getattr(self, name))
 
     def on(
-        self, name: str, callback: Optional[CallbackType] = None
+        self, name: Optional[str] = None, callback: Optional[CallbackType] = None
     ) -> Union[CallbackType, DecoratorType]:
         def set_callback_decorator(callback: CallbackType) -> CallbackType:
-            self._callbacks[name] = callback
+            self._callbacks[name or callback.__name__] = callback
             return callback
 
         return set_callback_decorator(callback) if callback else set_callback_decorator

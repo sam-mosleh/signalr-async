@@ -3,7 +3,7 @@ from typing import Any, Generator, Sequence, Tuple
 import msgpack
 
 from signalr_async.exceptions import InvalidMessage
-from signalr_async.signalrcore.messages import (
+from signalr_async.netcore.messages import (
     CancelInvocationMessage,
     CloseMessage,
     CompletionMessage,

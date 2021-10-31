@@ -2,8 +2,8 @@ import json
 
 from pytest_mock import MockFixture
 
-from signalr_async.signalr import SignalRConnection
-from signalr_async.signalr.messages import HubResult
+from signalr_async.net.connection import SignalRConnection
+from signalr_async.net.messages import HubResult
 
 
 def test_common_params():

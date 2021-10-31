@@ -1,8 +1,8 @@
 import pytest
 from pytest_mock import MockFixture
 
-from signalr_async.signalr.hub import SignalRHub
-from signalr_async.signalr.messages import HubInvocation
+from signalr_async.net.hub import SignalRHub
+from signalr_async.net.messages import HubInvocation
 
 pytestmark = pytest.mark.asyncio
 

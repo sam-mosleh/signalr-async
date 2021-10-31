@@ -54,7 +54,7 @@ class ConnectionBase(Generic[T, O]):
             except aiohttp.client_exceptions.ClientError as e:
                 self.logger.debug("Starting connection failed")
                 await self.stop()
-                raise ConnectionInitializationError() from e
+                raise ConnectionInitializationError("Client cannot connect") from e
             except ConnectionInitializationError:
                 self.logger.debug("initialize connection failed")
                 await self.stop()

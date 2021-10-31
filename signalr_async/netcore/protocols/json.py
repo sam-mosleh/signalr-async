@@ -2,7 +2,7 @@ import json
 from dataclasses import asdict
 from typing import Any, Dict, Generator, Tuple
 
-from signalr_async.signalrcore.messages import (
+from signalr_async.netcore.messages import (
     HubMessage,
     MessageTypes,
     message_type_to_class,
