@@ -39,19 +39,26 @@ class JsonProtocol(ProtocolBase[str]):
     def _sanitize_raw_message_dict(
         self, message: Dict[str, Any]
     ) -> Tuple[MessageTypes, Dict[str, Any]]:
-        message_type = message.pop("type")
+        result = {self.aliases.get(key, key): val for key, val in message.items()}
+        message_type = result.pop("type")
         if (
             message_type not in (MessageTypes.PING, MessageTypes.CLOSE)
-            and "headers" not in message
+            and "headers" not in result
         ):
-            message["headers"] = {}
-        if message_type == MessageTypes.COMPLETION:
-            message["result"] = message.get("result")
-            message["error"] = message.get("error")
-        if message_type == MessageTypes.CLOSE:
-            message["error"] = message.get("error")
-            message["allow_reconnect"] = message.get("allow_reconnect")
-        result = {self.aliases.get(key, key): val for key, val in message.items()}
+            result["headers"] = {}
+        if (
+            message_type in (MessageTypes.INVOCATION, MessageTypes.STREAM_INVOCATION)
+            and "stream_ids" not in result
+        ):
+            result["stream_ids"] = []
+        if message_type == MessageTypes.INVOCATION:
+            result["invocation_id"] = result.get("invocation_id")
+        elif message_type == MessageTypes.COMPLETION:
+            result["result"] = result.get("result")
+            result["error"] = result.get("error")
+        elif message_type == MessageTypes.CLOSE:
+            result["error"] = result.get("error")
+            result["allow_reconnect"] = result.get("allow_reconnect")
         return MessageTypes(message_type), result
 
     def parse(self, raw_messages: str) -> Generator[HubMessage, None, None]:

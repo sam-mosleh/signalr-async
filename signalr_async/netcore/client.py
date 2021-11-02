@@ -46,10 +46,11 @@ class SignalRCoreClient(
 
     async def _process_message(self, message: HubMessage) -> None:
         if isinstance(message, InvocationMessage):
-            self.logger.info(f"Callback {message}")
             await self._hub._call(message.target, message.arguments)
         elif isinstance(message, StreamItemMessage):
-            self.logger.info(f"Stream {message}")
+            self._invoke_manager.add_invocation_result(
+                message.invocation_id, message.item
+            )
         elif isinstance(message, CompletionMessage):
             if message.error:
                 self._invoke_manager.set_invocation_exception(
@@ -57,14 +58,14 @@ class SignalRCoreClient(
                 )
             else:
                 self._invoke_manager.set_invocation_result(
-                    message.invocation_id, message.error
+                    message.invocation_id, message.result
                 )
         elif isinstance(message, StreamInvocationMessage):
-            self.logger.info(f"Stream callback {message}")
+            self.logger.debug(f"Stream callback {message}")
         elif isinstance(message, CancelInvocationMessage):
-            self.logger.info(f"Cancel {message}")
+            self.logger.debug(f"Cancel {message}")
         elif isinstance(message, PingMessage):
-            self.logger.info("[PING]")
+            self.logger.debug("[PING]")
         elif isinstance(message, CloseMessage):
             if message.error:
                 self.logger.error(f"Server closed with reason: {message.error}")
@@ -73,4 +74,4 @@ class SignalRCoreClient(
             else:
                 await asyncio.shield(self.stop())
         else:
-            raise Exception("Unknown message type")
+            raise RuntimeError("Unknown message type")

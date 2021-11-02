@@ -117,7 +117,7 @@ class SignalRClientBase(ABC, Generic[H, R, I]):
                     await self._process_message(message)
             except ConnectionClosed:
                 # Receive failure
-                self.logger.info(f"Consumer state is {self._connection.state}")
+                self.logger.debug(f"Consumer state is {self._connection.state}")
                 if self.reconnect_policy:
                     if self._connection.state == "connected":
                         await self._connection.stop()
