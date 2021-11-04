@@ -77,7 +77,7 @@ class ConnectionBase(Generic[T, O]):
         self.logger.debug(f"Stopping connection with {self.state} state")
         if self.state not in ("disconnecting", "disconnected"):
             self.state = "disconnecting"
-            await self._clear_connection_data()
+            self._clear_connection_data()
             if self._websocket is not None:
                 await self._websocket.close()
                 self._websocket = None
@@ -92,10 +92,7 @@ class ConnectionBase(Generic[T, O]):
             return True
         return False
 
-    async def restart(self) -> bool:
-        return await self.stop()
-
-    async def _clear_connection_data(self) -> None:
+    def _clear_connection_data(self) -> None:
         pass
 
     async def _receive_raw(self, timeout: Optional[float] = None) -> Union[str, bytes]:

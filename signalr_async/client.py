@@ -65,7 +65,7 @@ class SignalRClientBase(ABC, Generic[H, R, I]):
         await self.stop()
 
     async def start(self) -> None:
-        if await self._connection.start():
+        if await self._start_connection():
             self._all_tasks.extend(
                 [
                     asyncio.create_task(self._consumer()),
@@ -75,17 +75,31 @@ class SignalRClientBase(ABC, Generic[H, R, I]):
                 ]
             )
             self.logger.debug("Tasks created")
-            await self._connection_event()
         self.logger.debug("Client started successfully")
 
     async def stop(self) -> None:
+        tasks = []
+        if self._all_tasks:
+            tasks.extend(self._all_tasks)
+            self._all_tasks.clear()
+            for task in tasks:
+                task.cancel()
+        await self._stop_connection()
+        if tasks:
+            gather = await asyncio.gather(*tasks)
+            self.logger.debug(f"{gather=}")
+
+    async def _start_connection(self) -> bool:
+        if await self._connection.start():
+            await self._connection_event()
+            return True
+        return False
+
+    async def _stop_connection(self) -> bool:
         if await self._connection.stop():
             await self._disconnection_event()
-        for task in self._all_tasks:
-            task.cancel()
-        gather = await asyncio.gather(*self._all_tasks, return_exceptions=True)
-        self._all_tasks.clear()
-        self.logger.debug(f"{gather=}")
+            return True
+        return False
 
     @abstractmethod
     async def _connection_event(self) -> None:
@@ -97,44 +111,44 @@ class SignalRClientBase(ABC, Generic[H, R, I]):
 
     async def _producer(self) -> None:
         while True:
-            message = await self._producer_queue.get()
-            if message.invocation_id:
-                try:
-                    await self._connection.send(message)
-                except ConnectionClosed:
-                    self.logger.error(
-                        f"Message has not been sent because connection is closed"
-                    )
-                    self._invoke_manager.set_invocation_exception(
-                        message.invocation_id, "Connection is closed"
-                    )
+            try:
+                message = await self._producer_queue.get()
+                if message.invocation_id:
+                    try:
+                        await self._connection.send(message)
+                    except ConnectionClosed:
+                        self.logger.error(
+                            f"Message has not been sent because connection is closed"
+                        )
+                        self._invoke_manager.set_invocation_exception(
+                            message.invocation_id, "Connection is closed"
+                        )
+            except asyncio.CancelledError:
+                break
 
     async def _consumer(self) -> None:
         while True:
             try:
-                messages = await self._connection.receive()
-                for message in messages:
-                    await self._process_message(message)
-            except ConnectionClosed:
-                # Receive failure
-                self.logger.debug(f"Consumer state is {self._connection.state}")
-                if self.reconnect_policy:
-                    if self._connection.state == "connected":
-                        await self._connection.stop()
-                        await self._disconnection_event()
-                    elif self._connection.state == "disconnected":
-                        try:
-                            await self._connection.start()
-                            await self._connection_event()
-                        except ConnectionInitializationError as e:
-                            self.logger.exception(e)
-                else:
-                    await asyncio.shield(self.stop())
-                await asyncio.sleep(1)
-            except Exception as e:
-                self.logger.exception(e)
-                # await asyncio.sleep(1)
-                raise e
+                try:
+                    messages = await self._connection.receive()
+                    for message in messages:
+                        await self._process_message(message)
+                except ConnectionClosed:
+                    # Receive failure
+                    self.logger.debug(f"Consumer state is {self._connection.state}")
+                    if self.reconnect_policy:
+                        if self._connection.state == "connected":
+                            await self._stop_connection()
+                        elif self._connection.state == "disconnected":
+                            try:
+                                await self._start_connection()
+                            except ConnectionInitializationError as e:
+                                self.logger.exception(e)
+                    else:
+                        await asyncio.shield(self.stop())
+                    await asyncio.sleep(1)
+            except asyncio.CancelledError:
+                break
 
     @abstractmethod
     async def _process_message(self, message: R) -> None:
@@ -143,27 +157,35 @@ class SignalRClientBase(ABC, Generic[H, R, I]):
     async def _timeout_handler(self) -> None:
         timeout_steps = min(self.timeout / 10, 1)
         while True:
-            await asyncio.sleep(timeout_steps)
-            if self._connection.last_message_received_time is not None:
-                diff = time.time() - self._connection.last_message_received_time
-                if diff >= self.timeout:
-                    self.logger.error("Connection timeout")
-                    await self._connection.stop()
-                    await self._disconnection_event()
-                elif diff >= self.timeout * 0.8:
-                    self.logger.warning("No message received in a long time")
+            try:
+                await asyncio.sleep(timeout_steps)
+                if self._connection.last_message_received_time is not None:
+                    diff = time.time() - self._connection.last_message_received_time
+                    if diff >= self.timeout:
+                        self.logger.error("Connection timeout")
+                        await self._stop_connection()
+                    elif diff >= self.timeout * 0.8:
+                        self.logger.warning("No message received in a long time")
+            except asyncio.CancelledError:
+                break
 
     async def _keepalive_handler(self) -> None:
         while True:
-            if self._connection.last_message_sent_time is None:
-                await asyncio.sleep(1)
-            else:
-                diff = time.time() - self._connection.last_message_sent_time
-                if diff >= self.keepalive_interval:
-                    self.logger.debug("Connection keepalive")
-                    try:
-                        await self._connection.ping()
-                    except ConnectionClosed:
-                        self.logger.error("Connection keepalive failed to send")
+            try:
+                if self._connection.last_message_sent_time is None:
+                    await asyncio.sleep(1)
                 else:
-                    await asyncio.sleep(self.keepalive_interval - diff)
+                    diff = time.time() - self._connection.last_message_sent_time
+                    if diff >= self.keepalive_interval:
+                        self.logger.debug("Connection keepalive")
+                        try:
+                            await self._connection.ping()
+                        except ConnectionClosed:
+                            self.logger.error("Connection keepalive failed to send")
+                    else:
+                        await asyncio.sleep(self.keepalive_interval - diff)
+            except asyncio.CancelledError:
+                break
+
+    async def wait(self) -> List[None]:
+        return await asyncio.gather(*self._all_tasks)

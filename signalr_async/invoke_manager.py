@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, Dict, Generic, List, TypeVar
+from typing import Any, Dict, Generic, TypeVar
 
 from .exceptions import ServerInvocationException
 from .messages import InvocationBase
@@ -67,7 +67,6 @@ class InvokeManager(Generic[I]):
             self.invocation_results[invocation_id].append(result)
             self.invocation_events[invocation_id].set()
         else:
-            print(self.invocation_results)
             raise RuntimeError(f"Invocation {invocation_id} is not a stream")
 
     def set_invocation_exception(self, invocation_id: str, error_msg: str) -> None:

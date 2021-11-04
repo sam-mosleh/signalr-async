@@ -69,8 +69,8 @@ class SignalRCoreClient(
         elif isinstance(message, CloseMessage):
             if message.error:
                 self.logger.error(f"Server closed with reason: {message.error}")
-            if self.reconnect_policy and message.allow_reconnect:
-                await self._connection.stop()
+            if message.allow_reconnect:
+                await self._stop_connection()
             else:
                 await asyncio.shield(self.stop())
         else:

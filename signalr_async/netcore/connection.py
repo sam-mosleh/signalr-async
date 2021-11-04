@@ -79,7 +79,7 @@ class SignalRCoreConnection(ConnectionBase[HubMessage, HubInvocableMessage]):
         if "error" in handshake_result:
             raise HandshakeError(handshake_result["error"])
 
-    async def _clear_connection_data(self) -> None:
+    def _clear_connection_data(self) -> None:
         self.connection_id = None
         self.connection_token = None
 

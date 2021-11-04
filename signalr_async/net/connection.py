@@ -60,8 +60,8 @@ class SignalRConnection(ConnectionBase[HubMessage, HubInvocation]):
     def _common_params(self) -> Dict[str, str]:
         connection_data = [{"name": hub_name} for hub_name in self._hub_names]
         params = dict(
-            connectionData=json.dumps(connection_data),
             clientProtocol=self.client_protocol_version,
+            connectionData=json.dumps(connection_data),
             **self._extra_params,
         )
         if self.transport is not None:
@@ -127,6 +127,7 @@ class SignalRConnection(ConnectionBase[HubMessage, HubInvocation]):
             start_response = await self._send_command(CommandEnum.START)
             if start_response["Response"] != "started":
                 raise ConnectionInitializationError("Server is not started")
+            await self.ping()
         else:
             raise ConnectionInitializationError("Server did not send the start message")
 
@@ -158,7 +159,7 @@ class SignalRConnection(ConnectionBase[HubMessage, HubInvocation]):
     def _write_message(self, message: HubInvocation) -> Tuple[Union[str, bytes], bool]:
         return json.dumps(message.to_raw_message() if message else {}), False
 
-    async def _clear_connection_data(self) -> None:
+    def _clear_connection_data(self) -> None:
         self.connection_id = None
         self.connection_token = None
         self.groups_token = None

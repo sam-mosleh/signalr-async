@@ -88,7 +88,7 @@ class HubBase(Generic[I]):
     def _create_invocation_message(
         self, invocation_id: str, method: str, args: Sequence[Any]
     ) -> I:
-        pass
+        """Create invocation message"""
 
     async def on_connect(self, connection_id: str) -> None:
         """Connect event"""

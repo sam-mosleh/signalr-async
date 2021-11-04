@@ -1,12 +1,12 @@
-from typing import Any, Sequence, AsyncGenerator
+from typing import Any, AsyncGenerator, Sequence
 
 from signalr_async.hub import HubBase
 
 from .messages import (
-    InvocationMessage,
-    StreamInvocationMessage,
     CancelInvocationMessage,
     HubInvocableMessage,
+    InvocationMessage,
+    StreamInvocationMessage,
 )
 
 
@@ -38,7 +38,7 @@ class SignalRCoreHub(HubBase[HubInvocableMessage]):
         ):
             try:
                 yield result
-            except GeneratorExit as e:
+            except GeneratorExit:
                 if self._logger:
                     self._logger.debug(f"Closing stream {invocation_id} with {method=}")
                 await self._invoke_manager.invoke(
