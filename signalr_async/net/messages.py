@@ -9,7 +9,7 @@ class HubInvocation(InvocationBase):
     hub: str
     target: str
     arguments: Sequence[Any]
-    state: Optional[Dict[str, Any]] = None
+    state: Optional[Dict[str, Any]]
 
     @classmethod
     def from_raw_message(cls, raw_message: Dict[str, Any]) -> "HubInvocation":
@@ -35,12 +35,12 @@ class HubInvocation(InvocationBase):
 @dataclass
 class HubResult:
     invocation_id: str
-    result: Optional[Any] = None
-    error: Optional[str] = None
-    error_data: Optional[Any] = None
-    is_hub_exception: Optional[bool] = None
-    progress_update: Optional[Any] = None
-    state: Optional[Any] = None
+    result: Optional[Any]
+    error: Optional[str]
+    error_data: Optional[Any]
+    is_hub_exception: Optional[bool]
+    progress_update: Optional[Any]
+    state: Optional[Any]
 
     @classmethod
     def from_raw_message(cls, raw_message: Dict[str, Any]) -> "HubResult":

@@ -1,4 +1,4 @@
-from signalr_async.netcore.messages import CompletionMessage, PingMessage
+from signalr_async.netcore.messages import CompletionMessage, MessageTypes, PingMessage
 from signalr_async.netcore.protocols import JsonProtocol
 
 handshake_dict = {"protocol": "json", "version": 1}
@@ -9,13 +9,13 @@ completion = CompletionMessage(invocation_id="1", headers={}, result=True, error
 encoded_completion = '{"type": 3, "invocation_id": "1", "result": true}\x1e'
 
 
-def test_json_protocol_handshake_params():
+def test_handshake_params():
     p = JsonProtocol()
     assert p.is_binary is False
     assert p.handshake_params == encoded_handshake
 
 
-def test_json_protocol_parse():
+def test_parse():
     p = JsonProtocol()
     assert list(p.decode(encoded_handshake)) == [handshake_dict]
     assert list(p.decode(2 * encoded_handshake)) == [handshake_dict, handshake_dict]
@@ -23,7 +23,26 @@ def test_json_protocol_parse():
     assert list(p.parse(encoded_completion)) == [completion]
 
 
-def test_json_protocol_write():
+def test_write():
     p = JsonProtocol()
     assert p.encode({"type": 6}) == encoded_ping
     assert p.write(ping) == encoded_ping
+
+
+def test_sanitize_raw_message():
+    p = JsonProtocol()
+    assert p._sanitize_raw_message_dict({"type": 1}) == (
+        MessageTypes.INVOCATION,
+        {
+            "headers": {},
+            "stream_ids": [],
+            "invocation_id": None,
+        },
+    )
+    assert p._sanitize_raw_message_dict({"type": 7}) == (
+        MessageTypes.CLOSE,
+        {
+            "error": None,
+            "allow_reconnect": None,
+        },
+    )

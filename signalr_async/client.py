@@ -3,7 +3,18 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import Any, Dict, Generic, List, Optional, Sequence, Type, TypeVar, Union
+from typing import (
+    Any,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from .connection import ConnectionBase
 from .exceptions import ConnectionClosed, ConnectionInitializationError
@@ -36,7 +47,7 @@ class SignalRClientBase(ABC, Generic[H, R, I]):
         self.reconnect_policy = reconnect_policy
         self.timeout = timeout
         self.keepalive_interval = keepalive_interval
-        self._all_tasks: List["asyncio.Task[None]"] = []
+        self._all_tasks: Set["asyncio.Task[None]"] = set()
         self._producer_queue: "asyncio.Queue[I]" = asyncio.Queue()
         self._invoke_manager = InvokeManager(self._producer_queue)
         self._connection = self.build_connection(base_url, connection_options or {})
@@ -66,19 +77,21 @@ class SignalRClientBase(ABC, Generic[H, R, I]):
 
     async def start(self) -> None:
         if await self._start_connection():
-            self._all_tasks.extend(
-                [
+            self._all_tasks.update(
+                {
                     asyncio.create_task(self._consumer()),
                     asyncio.create_task(self._producer()),
                     asyncio.create_task(self._timeout_handler()),
                     asyncio.create_task(self._keepalive_handler()),
-                ]
+                }
             )
+            # Context switch for tasks
+            await asyncio.sleep(0)
             self.logger.debug("Tasks created")
         self.logger.debug("Client started successfully")
 
     async def stop(self) -> None:
-        tasks = []
+        tasks: List["asyncio.Task[None]"] = []
         if self._all_tasks:
             tasks.extend(self._all_tasks)
             self._all_tasks.clear()
@@ -187,5 +200,11 @@ class SignalRClientBase(ABC, Generic[H, R, I]):
             except asyncio.CancelledError:
                 break
 
-    async def wait(self) -> List[None]:
-        return await asyncio.gather(*self._all_tasks)
+    async def wait(self, timeout: Optional[float] = None) -> None:
+        done, pending = await asyncio.wait(
+            self._all_tasks, timeout=timeout, return_when=asyncio.FIRST_COMPLETED
+        )
+        for task in done:
+            await task
+        if self._all_tasks and done:
+            raise RuntimeError("Tasks should be running")
