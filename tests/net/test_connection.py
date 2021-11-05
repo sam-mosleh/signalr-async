@@ -90,7 +90,15 @@ def test_read_message(mocker: MockFixture):
     assert conn._read_message(json.dumps(data)) == []
     data = {"R": "abc", "I": "0"}
     assert conn._read_message(json.dumps(data)) == [
-        HubResult(invocation_id=data["I"], result=data["R"])
+        HubResult(
+            invocation_id=data["I"],
+            result=data["R"],
+            error=None,
+            error_data=None,
+            is_hub_exception=None,
+            progress_update=None,
+            state=None,
+        )
     ]
     assert conn.groups_token == groups_token
     assert conn.message_id == message_id

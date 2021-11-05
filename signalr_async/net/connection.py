@@ -157,7 +157,7 @@ class SignalRConnection(ConnectionBase[HubMessage, HubInvocation]):
         return []
 
     def _write_message(self, message: HubInvocation) -> Tuple[Union[str, bytes], bool]:
-        return json.dumps(message.to_raw_message() if message else {}), False
+        return json.dumps(message.to_raw_message()), False
 
     def _clear_connection_data(self) -> None:
         self.connection_id = None

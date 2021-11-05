@@ -20,5 +20,5 @@ async def test_registered_signalr_hub_invoke_message(mocker: MockFixture):
     args = (1, True)
     hub = SignalRHub(hub_name)
     assert hub._create_invocation_message(invocation_id, method, args) == HubInvocation(
-        invocation_id, hub_name, method, args
+        invocation_id, hub_name, method, args, None
     )

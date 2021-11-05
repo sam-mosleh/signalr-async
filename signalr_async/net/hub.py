@@ -14,4 +14,5 @@ class SignalRHub(HubBase[HubInvocation]):
             hub=self.name,
             target=method,
             arguments=args or tuple(),
+            state=None,
         )
