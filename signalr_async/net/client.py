@@ -37,22 +37,20 @@ class SignalRClient(SignalRClientBase[Sequence[SignalRHub], HubMessage, HubInvoc
 
     async def _process_message(self, message: HubMessage) -> None:
         if isinstance(message, HubResult):
-            if message.progress_update:
+            if message.progress_update is not None:
                 self.logger.error(
                     f"ProgressUpdate messages are not implemented: {message}"
                 )
-            elif message.result:
-                self._invoke_manager.set_invocation_result(
-                    message.invocation_id, message.result
-                )
-            elif message.error:
+            elif message.error is not None:
                 self._invoke_manager.set_invocation_exception(
                     message.invocation_id, message.error
                 )
             else:
-                self.logger.error(f"Bad HubResult: {message}")
+                self._invoke_manager.set_invocation_result(
+                    message.invocation_id, message.result
+                )
         elif isinstance(message, HubInvocation):
-            if message.hub:
+            if message.hub is not None:
                 await self._hub_dict[message.hub]._call(
                     message.target, message.arguments
                 )
