@@ -9,7 +9,7 @@ from signalr_async.client import SignalRClientBase
 pytestmark = pytest.mark.asyncio
 
 
-class DummySignalRClient(SignalRClientBase[Any, Any, Any]):
+class DummySignalRClient(SignalRClientBase[Any, Any]):
     def build_connection(self, base_url, connection_options):
         pass
 

@@ -1,12 +1,11 @@
 import asyncio
-from typing import Any, Dict
+import logging
+from typing import Any, Dict, Optional
 
 from signalr_async.client import SignalRClientBase
 
 from .connection import SignalRCoreConnection
 from .hub import SignalRCoreHub
-
-# from .invoke_manager import SignalRCoreInvokeManager
 from .messages import (
     CancelInvocationMessage,
     CloseMessage,
@@ -20,9 +19,28 @@ from .messages import (
 )
 
 
-class SignalRCoreClient(
-    SignalRClientBase[SignalRCoreHub, HubMessage, HubInvocableMessage]
-):
+class SignalRCoreClient(SignalRClientBase[HubMessage, HubInvocableMessage]):
+    def __init__(
+        self,
+        base_url: str,
+        hub: SignalRCoreHub,
+        timeout: float = 30,
+        keepalive_interval: float = 15,
+        reconnect_policy: bool = True,
+        logger: Optional[logging.Logger] = None,
+        connection_options: Optional[Dict[str, Any]] = None,
+    ):
+        self._hub = hub
+        super().__init__(
+            base_url,
+            timeout,
+            keepalive_interval,
+            reconnect_policy,
+            logger,
+            connection_options,
+        )
+        self._hub._set_invoke_manager(self._invoke_manager)._set_logger(self.logger)
+
     def build_connection(
         self,
         base_url: str,

@@ -50,7 +50,8 @@ class SignalRConnection(ConnectionBase[HubMessage, HubInvocation]):
         extra_headers: Optional[Dict[str, str]] = None,
         logger: Optional[logging.Logger] = None,
     ):
-        super().__init__(base_url, hub_names, extra_params, extra_headers, logger)
+        super().__init__(base_url, extra_params, extra_headers, logger)
+        self._hub_names = hub_names or []
         self.transport: Optional[str] = None
         self.message_id: Optional[str] = None
         self.groups_token: Optional[str] = None

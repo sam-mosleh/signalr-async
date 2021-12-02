@@ -16,7 +16,6 @@ class ConnectionBase(Generic[T, O]):
     def __init__(
         self,
         base_url: str,
-        hub_names: Optional[List[str]] = None,
         extra_params: Optional[Dict[str, str]] = None,
         extra_headers: Optional[Dict[str, str]] = None,
         logger: Optional[logging.Logger] = None,
@@ -25,7 +24,6 @@ class ConnectionBase(Generic[T, O]):
         self._extra_params = extra_params or {}
         self._extra_headers = extra_headers or {}
         self.logger = logger or logging.getLogger(__name__)
-        self._hub_names = hub_names or []
         self.last_message_received_time: Optional[float] = None
         self.last_message_sent_time: Optional[float] = None
         self._session: Optional[aiohttp.ClientSession] = None
@@ -63,15 +61,15 @@ class ConnectionBase(Generic[T, O]):
 
     @abstractmethod
     async def _negotiate(self) -> None:
-        pass
+        """Negotiation with server"""
 
     @abstractmethod
     def _generate_connect_path(self) -> yarl.URL:
-        pass
+        """Build connection path to the server websocket"""
 
     @abstractmethod
     async def _initialize_connection(self) -> None:
-        pass
+        """Initialize the connection through handshakes and wait for server to get started"""
 
     async def stop(self) -> bool:
         self.logger.debug(f"Stopping connection with {self.state} state")
@@ -106,11 +104,6 @@ class ConnectionBase(Generic[T, O]):
             aiohttp.WSMsgType.CLOSED,
         ):
             raise ConnectionClosed(raw_ws_message.data, raw_ws_message.extra) from None
-        # elif raw_ws_message.type not in (
-        #     aiohttp.WSMsgType.TEXT,
-        #     aiohttp.WSMsgType.BINARY,
-        # ):
-        #     raise Exception("Unknown websocket message type") from None
         self.last_message_received_time = time.time()
         return raw_ws_message.data  # type: ignore
 
@@ -136,12 +129,12 @@ class ConnectionBase(Generic[T, O]):
 
     @abstractmethod
     def _read_message(self, data: Union[str, bytes]) -> List[T]:
-        pass
+        """Parse messages from raw format transferred to client by the server"""
 
     @abstractmethod
     def _write_message(self, message: O) -> Tuple[Union[str, bytes], bool]:
-        pass
+        """Write message to be transferable and indicate that the output is binary or not"""
 
     @abstractmethod
     async def ping(self) -> None:
-        pass
+        """Send ping message to the server"""
