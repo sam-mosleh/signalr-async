@@ -74,3 +74,7 @@ class InvokeManager(Generic[I]):
             raise RuntimeError(f"invocation event {invocation_id} not found")
         self.invocation_exceptions[invocation_id] = ServerInvocationException(error_msg)
         self.invocation_events[invocation_id].set()
+
+    def cancel_all_pending_invocations(self, error_msg: str) -> None:
+        for invocation_id in self.invocation_events:
+            self.set_invocation_exception(invocation_id, error_msg)

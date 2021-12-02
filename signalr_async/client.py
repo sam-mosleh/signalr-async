@@ -3,46 +3,29 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import (
-    Any,
-    Dict,
-    Generic,
-    List,
-    Optional,
-    Sequence,
-    Set,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Any, Dict, Generic, List, Optional, Set, Type, TypeVar
 
 from .connection import ConnectionBase
 from .exceptions import ConnectionClosed, ConnectionInitializationError
-from .hub import HubBase
 from .invoke_manager import InvokeManager
 from .messages import InvocationBase
 
 # Type of Invoke message which is in queue
 I = TypeVar("I", bound=InvocationBase)
-# Type of hub
-# H = TypeVar("H")
-H = TypeVar("H", bound=Union[HubBase[Any], Sequence[HubBase[Any]]])
 # Type of all Messages received
 R = TypeVar("R")
 
 
-class SignalRClientBase(ABC, Generic[H, R, I]):
+class SignalRClientBase(ABC, Generic[R, I]):
     def __init__(
         self,
         base_url: str,
-        hub: H,
         timeout: float = 30,
         keepalive_interval: float = 15,
         reconnect_policy: bool = True,
         logger: Optional[logging.Logger] = None,
         connection_options: Optional[Dict[str, Any]] = None,
     ):
-        self._hub = hub
         self.logger = logger or logging.getLogger(__name__)
         self.reconnect_policy = reconnect_policy
         self.timeout = timeout
@@ -51,11 +34,6 @@ class SignalRClientBase(ABC, Generic[H, R, I]):
         self._producer_queue: "asyncio.Queue[I]" = asyncio.Queue()
         self._invoke_manager = InvokeManager(self._producer_queue)
         self._connection = self.build_connection(base_url, connection_options or {})
-        if isinstance(self._hub, Sequence):
-            for h in self._hub:
-                h._set_invoke_manager(self._invoke_manager)._set_logger(self.logger)
-        else:
-            self._hub._set_invoke_manager(self._invoke_manager)._set_logger(self.logger)
 
     @abstractmethod
     def build_connection(
@@ -63,7 +41,7 @@ class SignalRClientBase(ABC, Generic[H, R, I]):
     ) -> ConnectionBase[R, I]:
         """Build new connection"""
 
-    async def __aenter__(self) -> "SignalRClientBase[H, R, I]":
+    async def __aenter__(self) -> "SignalRClientBase[R, I]":
         await self.start()
         return self
 
@@ -110,6 +88,7 @@ class SignalRClientBase(ABC, Generic[H, R, I]):
 
     async def _stop_connection(self) -> bool:
         if await self._connection.stop():
+            self._invoke_manager.cancel_all_pending_invocations("Client disconnected")
             await self._disconnection_event()
             return True
         return False

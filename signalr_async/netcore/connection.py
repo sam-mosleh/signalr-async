@@ -22,7 +22,7 @@ class SignalRCoreConnection(ConnectionBase[HubMessage, HubInvocableMessage]):
         extra_headers: Optional[Dict[str, str]] = None,
         logger: Optional[logging.Logger] = None,
     ):
-        super().__init__(base_url, [hub_name], extra_params, extra_headers, logger)
+        super().__init__(base_url, extra_params, extra_headers, logger)
         self._url = self._base_url / hub_name
         self.protocol = protocol or JsonProtocol()
         self.handshake_protocol = JsonProtocol()
@@ -39,6 +39,7 @@ class SignalRCoreConnection(ConnectionBase[HubMessage, HubInvocableMessage]):
     ) -> Any:
         if self._session is None:
             raise RuntimeError("Connection is not started")
+        print(self._url / command, params or self._common_params(), self._extra_headers)
         async with self._session.post(
             self._url / command,
             params=params or self._common_params(),
