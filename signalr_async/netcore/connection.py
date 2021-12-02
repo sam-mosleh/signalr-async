@@ -39,7 +39,6 @@ class SignalRCoreConnection(ConnectionBase[HubMessage, HubInvocableMessage]):
     ) -> Any:
         if self._session is None:
             raise RuntimeError("Connection is not started")
-        print(self._url / command, params or self._common_params(), self._extra_headers)
         async with self._session.post(
             self._url / command,
             params=params or self._common_params(),
