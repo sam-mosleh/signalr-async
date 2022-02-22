@@ -47,10 +47,13 @@ class SignalRConnection(ConnectionBase[HubMessage, HubInvocation]):
         base_url: str,
         hub_names: Optional[List[str]] = None,
         extra_params: Optional[Dict[str, str]] = None,
-        extra_headers: Optional[Dict[str, str]] = None,
+        http_client_options: Optional[Dict[str, Any]] = None,
+        ws_client_options: Optional[Dict[str, Any]] = None,
         logger: Optional[logging.Logger] = None,
     ):
-        super().__init__(base_url, extra_params, extra_headers, logger)
+        super().__init__(
+            base_url, extra_params, http_client_options, ws_client_options, logger
+        )
         self._hub_names = hub_names or []
         self.transport: Optional[str] = None
         self.message_id: Optional[str] = None
@@ -85,7 +88,7 @@ class SignalRConnection(ConnectionBase[HubMessage, HubInvocation]):
         async with self._session.get(
             self._base_url / command.value,
             params=self._common_params(),
-            headers=self._extra_headers,
+            **self._http_client_options,
         ) as resp:
             resp.raise_for_status()
             return await resp.json()

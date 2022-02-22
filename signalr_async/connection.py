@@ -1,7 +1,7 @@
 import logging
 import time
 from abc import abstractmethod
-from typing import Dict, Generic, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Dict, Generic, List, Optional, Tuple, TypeVar, Union
 
 import aiohttp
 import yarl
@@ -17,12 +17,14 @@ class ConnectionBase(Generic[T, O]):
         self,
         base_url: str,
         extra_params: Optional[Dict[str, str]] = None,
-        extra_headers: Optional[Dict[str, str]] = None,
+        http_client_options: Optional[Dict[str, Any]] = None,
+        ws_client_options: Optional[Dict[str, Any]] = None,
         logger: Optional[logging.Logger] = None,
     ):
         self._base_url = yarl.URL(base_url)
         self._extra_params = extra_params or {}
-        self._extra_headers = extra_headers or {}
+        self._http_client_options = http_client_options or {}
+        self._ws_client_options = ws_client_options or {}
         self.logger = logger or logging.getLogger(__name__)
         self.last_message_received_time: Optional[float] = None
         self.last_message_sent_time: Optional[float] = None
@@ -43,7 +45,8 @@ class ConnectionBase(Generic[T, O]):
                 connect_path = self._generate_connect_path()
                 self.logger.debug(f"Connecting to {connect_path}")
                 self._websocket = await self._session.ws_connect(
-                    connect_path, headers=self._extra_headers
+                    connect_path,
+                    **self._ws_client_options,
                 )
                 self.logger.debug("Initializing")
                 await self._initialize_connection()
@@ -98,6 +101,8 @@ class ConnectionBase(Generic[T, O]):
             raise ConnectionClosed() from None
         raw_ws_message = await self._websocket.receive(timeout=timeout)
         self.logger.debug(f"Raw message received: {raw_ws_message}")
+        if raw_ws_message.type == aiohttp.WSMsgType.ERROR:
+            raise ConnectionError()
         if raw_ws_message.type in (
             aiohttp.WSMsgType.CLOSE,
             aiohttp.WSMsgType.CLOSING,

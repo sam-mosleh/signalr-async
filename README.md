@@ -29,7 +29,7 @@ pip install signalr-async
 
 ### Create it
 
-* Create a file `main.py` with:
+- Create a file `main.py` with:
 
 ```Python
 import asyncio
@@ -78,11 +78,13 @@ for i in range(10):
 
 async def main():
     token = "mytoken"
+    headers = {"Authorization": f"Bearer {token}"}
     async with Client(
         "https://localhost:9000",
         hub,
         connection_options={
-            "extra_headers": {"Authorization": f"Bearer {token}"},
+            "http_client_options": {"headers": headers},
+            "ws_client_options": {"headers": headers, "timeout": 1.0},
             "protocol": MessagePackProtocol(),
         },
     ) as client:

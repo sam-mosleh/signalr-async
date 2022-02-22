@@ -44,7 +44,8 @@ class SignalRClient(SignalRClientBase[HubMessage, HubInvocation]):
             base_url=base_url,
             hub_names=[hub.name for hub in self._hubs],
             extra_params=connection_options.get("extra_params"),
-            extra_headers=connection_options.get("extra_headers"),
+            http_client_options=connection_options.get("http_client_options"),
+            ws_client_options=connection_options.get("ws_client_options"),
             logger=self.logger,
         )
 

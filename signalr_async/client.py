@@ -110,7 +110,7 @@ class SignalRClientBase(ABC, Generic[R, I]):
                         await self._connection.send(message)
                     except ConnectionClosed:
                         self.logger.error(
-                            f"Message has not been sent because connection is closed"
+                            f"Message {message.invocation_id} has not been sent because connection is closed"
                         )
                         self._invoke_manager.set_invocation_exception(
                             message.invocation_id, "Connection is closed"

@@ -51,7 +51,8 @@ class SignalRCoreClient(SignalRClientBase[HubMessage, HubInvocableMessage]):
             hub_name=self._hub.name,
             protocol=connection_options.get("protocol"),
             extra_params=connection_options.get("extra_params"),
-            extra_headers=connection_options.get("extra_headers"),
+            http_client_options=connection_options.get("http_client_options"),
+            ws_client_options=connection_options.get("ws_client_options"),
             logger=self.logger,
         )
 
