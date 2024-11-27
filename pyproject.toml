@@ -10,7 +10,7 @@ keywords = ["SignalR", "SignalR client", "Real-time messaging"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-aiohttp = "^3.6.0"
+aiohttp = ">=3.6.0,<3.11.0"
 msgpack = "^1.0.2"
 
 [tool.poetry.dev-dependencies]
