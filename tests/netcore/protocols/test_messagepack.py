@@ -27,15 +27,15 @@ def test_messagepack_protocol_write():
 
 def test_get_size():
     p = MessagePackProtocol()
-    assert p._get_size(b"\x01", 0) == (1, 2 ** 0)
-    assert p._get_size(b"\x81\x01", 0) == (2, 2 ** 7 + 2 ** 0)
+    assert p._get_size(b"\x01", 0) == (1, 2**0)
+    assert p._get_size(b"\x81\x01", 0) == (2, 2**7 + 2**0)
     with pytest.raises(InvalidMessage):
         p._get_size(b"\x80", 0)
 
 
 def test_get_big_message_size():
     p = MessagePackProtocol()
-    assert p._get_size(b"\x80" * 4 + b"\x03", 0) == (5, 3 * 2 ** 28)
+    assert p._get_size(b"\x80" * 4 + b"\x03", 0) == (5, 3 * 2**28)
     with pytest.raises(InvalidMessage):
         p._get_size(b"\x80" * 4 + b"\x04", 0)  # 2 ** 30 bytes = 2GB
 
